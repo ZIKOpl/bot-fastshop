@@ -1,52 +1,33 @@
 import discord
 from discord.ext import commands
-from discord import app_commands
-import asyncio
 from flask import Flask
-import threading
+import asyncio
 import os
 
-# ----- CONFIG -----
-TOKEN = os.environ.get("DISCORD_TOKEN")  # Mets ton token dans les secrets de Replit
-GUILD_ID = int(os.environ.get("GUILD_ID", 0))  # Optionnel pour les tests, sinon None
+TOKEN = os.environ.get("DISCORD_TOKEN")  # Mets ton token dans Render -> Environment
 
-# ----- BOT -----
-intents = discord.Intents.default()
-intents.message_content = True
-bot = commands.Bot(command_prefix="!", intents=intents)
+bot = commands.Bot(command_prefix="!", intents=discord.Intents.all())
 
-# ----- COG -----
-async def load_cogs():
-    for cog in ["vouch_cog"]:  # ton fichier vouch doit s'appeler vouch_cog.py
-        await bot.load_extension(f"commands.{cog}")
-
-# ----- EVENT READY -----
-@bot.event
-async def on_ready():
-    print(f"{bot.user} est connecté !")
-    try:
-        await bot.tree.sync(guild=discord.Object(id=GUILD_ID) if GUILD_ID else None)
-        print("Commandes slash synchronisées !")
-    except Exception as e:
-        print(f"Erreur sync slash commands: {e}")
-
-# ----- FLASK POUR MAINTENIR LE BOT EN VIE -----
+# ----- Flask pour Render -----
 app = Flask("")
 
 @app.route("/")
 def home():
-    return "Bot FastShop est en ligne !"
+    return "Bot FastShop en ligne !"
 
-def run_flask():
-    app.run(host="0.0.0.0", port=8080)
+def run():
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
 
-# ----- THREADING POUR FLASK -----
-flask_thread = threading.Thread(target=run_flask)
-flask_thread.start()
+# ----- Chargement des cogs -----
+async def load_cogs():
+    for cog in ["vouch_cog", "ping_cog"]:
+        await bot.load_extension(f"commands.{cog}")
 
-# ----- MAIN -----
 async def main():
     await load_cogs()
     await bot.start(TOKEN)
 
-asyncio.run(main())
+if __name__ == "__main__":
+    loop = asyncio.get_event_loop()
+    loop.create_task(main())
+    run()
