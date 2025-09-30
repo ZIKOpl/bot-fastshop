@@ -64,7 +64,7 @@ class Vouch(commands.Cog):
 
         embed = discord.Embed(
             title=f"New Vouch de {interaction.user.display_name}",
-            color=discord.Color.gold()
+            color=discord.Color.blue()
         )
         embed.add_field(name="Note", value=stars, inline=False)
         embed.add_field(name="Vendeur", value=vendeur.mention, inline=False)
