@@ -1,12 +1,12 @@
 const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
 const fs = require("fs");
 const path = require("path");
+const updateLeaderboard = require("../utils/leaderboard");
 
 const VOUCH_FILE = path.join(__dirname, "../vouches.json");
 let vouches = {};
 let vouchCounter = 0;
 
-// Load vouches
 if (fs.existsSync(VOUCH_FILE)) {
     vouches = JSON.parse(fs.readFileSync(VOUCH_FILE));
     vouchCounter = Math.max(0, ...Object.keys(vouches).map(k => parseInt(k)));
@@ -81,5 +81,8 @@ module.exports = {
             author_id: interaction.user.id
         };
         saveVouches();
+
+        // Mise à jour leaderboard
+        await updateLeaderboard(interaction.client, vouches);
     }
 };
