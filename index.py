@@ -1,41 +1,52 @@
-import os
 import discord
 from discord.ext import commands
+from discord import app_commands
 import asyncio
-from keep_alive import keep_alive  # ton serveur Flask
+from flask import Flask
+import threading
 import os
 
-# === CONFIG ===
-DISCORD_TOKEN = os.environ.get("DISCORD_TOKEN")
+# ----- CONFIG -----
+TOKEN = os.environ.get("DISCORD_TOKEN")  # Mets ton token dans les secrets de Replit
+GUILD_ID = int(os.environ.get("GUILD_ID", 0))  # Optionnel pour les tests, sinon None
 
-# Intents
+# ----- BOT -----
 intents = discord.Intents.default()
 intents.message_content = True
-intents.members = True  # nécessaire pour vérifier les rôles staff
+bot = commands.Bot(command_prefix="!", intents=intents)
 
-# Bot
-bot = commands.Bot(command_prefix=".", intents=intents)
+# ----- COG -----
+async def load_cogs():
+    for cog in ["vouch_cog"]:  # ton fichier vouch doit s'appeler vouch_cog.py
+        await bot.load_extension(f"commands.{cog}")
 
-# Charger toutes les commandes du dossier commands/ de façon asynchrone
-async def load_commands():
-    for file in os.listdir("./commands"):
-        if file.endswith(".py"):
-            await bot.load_extension(f"commands.{file[:-3]}")
-
+# ----- EVENT READY -----
 @bot.event
 async def on_ready():
+    print(f"{bot.user} est connecté !")
     try:
-        await bot.tree.sync()
+        await bot.tree.sync(guild=discord.Object(id=GUILD_ID) if GUILD_ID else None)
+        print("Commandes slash synchronisées !")
     except Exception as e:
         print(f"Erreur sync slash commands: {e}")
-    print(f"✅ Bot connecté en tant que {bot.user}")
 
-# Fonction principale
+# ----- FLASK POUR MAINTENIR LE BOT EN VIE -----
+app = Flask("")
+
+@app.route("/")
+def home():
+    return "Bot FastShop est en ligne !"
+
+def run_flask():
+    app.run(host="0.0.0.0", port=8080)
+
+# ----- THREADING POUR FLASK -----
+flask_thread = threading.Thread(target=run_flask)
+flask_thread.start()
+
+# ----- MAIN -----
 async def main():
-    keep_alive()  # Lance Flask pour Render
-    await load_commands()  # Charge les cogs
-    await bot.start(DISCORD_TOKEN)  # Démarre le bot
+    await load_cogs()
+    await bot.start(TOKEN)
 
-if __name__ == "__main__":
-    # Lance le bot dans asyncio
-    asyncio.run(main())
+asyncio.run(main())

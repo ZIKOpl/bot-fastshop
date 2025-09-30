@@ -2,28 +2,42 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 from datetime import datetime
+import json
+import os
 
+# ----- CONFIG -----
 ITEMS = [
     "Nitro Boost 1 Month",
     "Nitro Basic 1 month",
     "Discord Account",
     "Server Boost",
     "Message Réaction",
-    "décorarion"
+    "Décoration"
 ]
-
 PAYMENTS = ["PayPal", "LTC"]
-
-vouch_counter = 0
-vouches = {}  # clé = vouch_id, valeur = dict {message, author_id}
-
 STAFF_ROLE_NAME = "Staff"  # <-- adapte selon ton serveur
+VOUCH_FILE = "vouches.json"
 
+# ----- LOAD VOUCHES -----
+if os.path.exists(VOUCH_FILE):
+    with open(VOUCH_FILE, "r") as f:
+        vouches = json.load(f)
+        vouches = {int(k): {"message_id": v["message_id"], "channel_id": v["channel_id"], "author_id": v["author_id"]} for k,v in vouches.items()}
+        vouch_counter = max(vouches.keys(), default=0)
+else:
+    vouches = {}
+    vouch_counter = 0
+
+def save_vouches():
+    with open(VOUCH_FILE, "w") as f:
+        json.dump({k: {"message_id": v["message_id"], "channel_id": v["channel_id"], "author_id": v["author_id"]} for k,v in vouches.items()}, f, indent=4)
+
+# ----- COG -----
 class Vouch(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    # ----- COMMAND /vouch -----
+    # ----- /vouch -----
     @app_commands.command(name="vouch", description="Donne ton avis sur un service")
     @app_commands.describe(
         vendeur="Mentionne le vendeur",
@@ -76,58 +90,82 @@ class Vouch(commands.Cog):
         embed.set_thumbnail(url=interaction.user.display_avatar.url)
         embed.set_footer(text="Service proposé par FastShop • Optimisé")
 
-        msg = await interaction.response.send_message(embed=embed)
-        vouches[vouch_counter] = {"message": await interaction.original_response(), "author_id": interaction.user.id}
+        # Envoi du message
+        await interaction.response.send_message(embed=embed)
+        msg = await interaction.original_response()
 
-    # ----- COMMAND /deletevouch (Membre) -----
+        vouches[vouch_counter] = {
+            "message_id": msg.id,
+            "channel_id": msg.channel.id,
+            "author_id": interaction.user.id
+        }
+        save_vouches()
+
+    # ----- /deletevouch -----
     @app_commands.command(name="deletevouch", description="Supprime ton propre vouch")
     @app_commands.describe(vouch_id="ID du vouch à supprimer")
     async def deletevouch(self, interaction: discord.Interaction, vouch_id: int):
-        if vouch_id in vouches:
-            if vouches[vouch_id]["author_id"] != interaction.user.id:
-                await interaction.response.send_message("❌ Tu ne peux supprimer que tes propres vouches.", ephemeral=True)
-                return
-            try:
-                await vouches[vouch_id]["message"].delete()
-                del vouches[vouch_id]
-                await interaction.response.send_message(f"✅ Ton vouch **#{vouch_id}** a été supprimé.", ephemeral=True)
-            except discord.NotFound:
-                await interaction.response.send_message("⚠️ Ce vouch n'existe plus.", ephemeral=True)
-        else:
+        if vouch_id not in vouches:
             await interaction.response.send_message("❌ Aucun vouch trouvé avec cet ID.", ephemeral=True)
+            return
 
-    # ----- COMMAND /staffdeletevouch (Staff) -----
+        if vouches[vouch_id]["author_id"] != interaction.user.id:
+            await interaction.response.send_message("❌ Tu ne peux supprimer que tes propres vouches.", ephemeral=True)
+            return
+
+        try:
+            channel = self.bot.get_channel(vouches[vouch_id]["channel_id"])
+            msg = await channel.fetch_message(vouches[vouch_id]["message_id"])
+            await msg.delete()
+            del vouches[vouch_id]
+            save_vouches()
+            await interaction.response.send_message(f"✅ Ton vouch **#{vouch_id}** a été supprimé.", ephemeral=True)
+        except discord.NotFound:
+            await interaction.response.send_message("⚠️ Ce vouch n'existe plus.", ephemeral=True)
+
+    # ----- /staffdeletevouch -----
     @app_commands.command(name="staffdeletevouch", description="Supprime un vouch (Staff uniquement)")
     @app_commands.describe(vouch_id="ID du vouch à supprimer")
     async def staffdeletevouch(self, interaction: discord.Interaction, vouch_id: int):
         if not any(role.name == STAFF_ROLE_NAME for role in interaction.user.roles):
             await interaction.response.send_message("❌ Tu n'as pas la permission d'utiliser cette commande.", ephemeral=True)
             return
-        if vouch_id in vouches:
-            try:
-                await vouches[vouch_id]["message"].delete()
-                del vouches[vouch_id]
-                await interaction.response.send_message(f"✅ Le vouch **#{vouch_id}** a été supprimé.", ephemeral=True)
-            except discord.NotFound:
-                await interaction.response.send_message("⚠️ Ce vouch n'existe plus.", ephemeral=True)
-        else:
-            await interaction.response.send_message("❌ Aucun vouch trouvé avec cet ID.", ephemeral=True)
 
-    # ----- COMMAND /resetvouch (Staff) -----
+        if vouch_id not in vouches:
+            await interaction.response.send_message("❌ Aucun vouch trouvé avec cet ID.", ephemeral=True)
+            return
+
+        try:
+            channel = self.bot.get_channel(vouches[vouch_id]["channel_id"])
+            msg = await channel.fetch_message(vouches[vouch_id]["message_id"])
+            await msg.delete()
+            del vouches[vouch_id]
+            save_vouches()
+            await interaction.response.send_message(f"✅ Le vouch **#{vouch_id}** a été supprimé.", ephemeral=True)
+        except discord.NotFound:
+            await interaction.response.send_message("⚠️ Ce vouch n'existe plus.", ephemeral=True)
+
+    # ----- /resetvouch -----
     @app_commands.command(name="resetvouch", description="Réinitialise tous les vouches (Staff uniquement)")
     async def resetvouch(self, interaction: discord.Interaction):
         if not any(role.name == STAFF_ROLE_NAME for role in interaction.user.roles):
             await interaction.response.send_message("❌ Tu n'as pas la permission d'utiliser cette commande.", ephemeral=True)
             return
-        for v in vouches.values():
+
+        for v in list(vouches.values()):
             try:
-                await v["message"].delete()
+                channel = self.bot.get_channel(v["channel_id"])
+                msg = await channel.fetch_message(v["message_id"])
+                await msg.delete()
             except:
                 continue
+
         vouches.clear()
         global vouch_counter
         vouch_counter = 0
+        save_vouches()
         await interaction.response.send_message("✅ Tous les vouches ont été réinitialisés.", ephemeral=True)
+
 
 async def setup(bot):
     await bot.add_cog(Vouch(bot))
