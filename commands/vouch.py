@@ -5,9 +5,11 @@ from datetime import datetime
 
 ITEMS = [
     "Nitro Boost 1 Month",
-    "Nitro Boost 1 Year",
+    "Nitro Basic 1 month",
     "Discord Account",
-    "Server Boost 14x"
+    "Server Boost",
+    "Message Réaction",
+    "décorarion"
 ]
 
 PAYMENTS = ["PayPal", "LTC"]
