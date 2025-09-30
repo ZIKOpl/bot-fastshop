@@ -1,39 +1,20 @@
-import os
 import discord
 from discord.ext import commands
-from flask import Flask
-import asyncio
+from discord import app_commands
 
-# --- Variables ---
-TOKEN = os.environ.get("DISCORD_TOKEN")  # Token Discord en variable d'environnement
-PORT = int(os.environ.get("PORT", 10000))
+class Ping(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
 
-# --- Bot Discord (slash commands) ---
-intents = discord.Intents.default()
-bot = commands.Bot(command_prefix="/", intents=intents)  # prefix "/" mais pour app_commands c'est secondaire
+    @app_commands.command(name="ping", description="Teste la latence du bot")
+    async def ping(self, interaction: discord.Interaction):
+        embed = discord.Embed(
+            title="🏓 Pong !",
+            color=discord.Color.blue()
+        )
+        embed.add_field(name="Latence API", value=f"{round(self.bot.latency*1000)} ms", inline=True)
+        embed.set_footer(text=f"Demandé par {interaction.user.display_name}")
+        await interaction.response.send_message(embed=embed)
 
-# --- Charger les cogs ---
-async def load_cogs():
-    for cog in ["vouch_cog", "ping_cog"]:  # fichiers dans commands/
-        await bot.load_extension(f"commands.{cog}")
-
-# --- Flask ping ---
-app = Flask("")
-
-@app.route("/")
-def home():
-    return "Bot FastShop en ligne ! ✅"
-
-# --- Lancement Bot + Flask ---
-async def main():
-    await load_cogs()
-    await bot.start(TOKEN)
-
-# --- Boucle asyncio ---
-loop = asyncio.new_event_loop()
-asyncio.set_event_loop(loop)
-loop.create_task(main())
-
-# --- Lancer Flask ---
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=PORT)
+async def setup(bot):
+    await bot.add_cog(Ping(bot))
