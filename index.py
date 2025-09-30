@@ -1,48 +1,50 @@
 import discord
 from discord.ext import commands
 from flask import Flask
-import threading
+import asyncio
 import os
 
-# ------------------------------
-# Flask pour uptime
-# ------------------------------
-app = Flask("")
+TOKEN = os.getenv("DISCORD_TOKEN")  # Ton token Discord dans Render Secrets
+GUILD_ID = int(os.getenv("GUILD_ID"))  # Optionnel : si tu veux restreindre les slash commands à ton serveur
+
+# ----- Flask pour Uptime Robot -----
+app = Flask(__name__)
 
 @app.route("/")
 def home():
-    return "Bot FastShop en ligne ✅"
+    return "Bot en ligne ✅"
 
+# Lance Flask dans un thread séparé
+import threading
 def run_flask():
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 10000)))
 
-threading.Thread(target=run_flask, daemon=True).start()
+threading.Thread(target=run_flask).start()
 
-# ------------------------------
-# Bot Discord
-# ------------------------------
-TOKEN = os.environ.get("DISCORD_TOKEN")
-
+# ----- Bot Discord -----
 intents = discord.Intents.default()
-intents.members = True
+intents.message_content = True  # Nécessaire si tu veux lire le contenu des messages
+bot = commands.Bot(command_prefix="/", intents=intents)
 
-class MyBot(commands.Bot):
-    def __init__(self):
-        super().__init__(command_prefix="/", intents=intents)
+# ----- Chargement des cogs -----
+COGS = ["commands.ping_cog", "commands.vouch_cog"]  # Tes cogs dans le dossier commands
 
-    async def setup_hook(self):
-        # Charger tes cogs ici
-        for cog in ["commands.ping_cog", "commands.vouch_cog"]:
-            try:
-                await self.load_extension(cog)
-                print(f"[COG] {cog} chargé ✅")
-            except Exception as e:
-                print(f"[COG] Erreur en chargeant {cog} : {e}")
-
-bot = MyBot()
+async def setup_bot():
+    for cog in COGS:
+        await bot.load_extension(cog)
 
 @bot.event
 async def on_ready():
-    print(f"Bot {bot.user} en ligne ! ✅")
+    print(f"{bot.user} est connecté !")
 
+# Utilisation de setup_hook pour charger les cogs correctement
+class MyBot(commands.Bot):
+    async def setup_hook(self):
+        for cog in COGS:
+            await self.load_extension(cog)
+        print("Cogs chargés ✅")
+
+bot = MyBot(command_prefix="/", intents=intents)
+
+# Lancement du bot
 bot.run(TOKEN)
