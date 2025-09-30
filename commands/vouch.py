@@ -15,7 +15,8 @@ ITEMS = [
     "Décoration"
 ]
 PAYMENTS = ["PayPal", "LTC"]
-STAFF_ROLE_NAME = "Staff"  # <-- adapte selon ton serveur
+
+STAFF_ROLE_ID = 1418652782625296445  # <-- ID du rôle Staff
 VOUCH_FILE = "vouches.json"
 
 # ----- LOAD VOUCHES -----
@@ -90,7 +91,6 @@ class Vouch(commands.Cog):
         embed.set_thumbnail(url=interaction.user.display_avatar.url)
         embed.set_footer(text="Service proposé par FastShop • Optimisé")
 
-        # Envoi du message
         await interaction.response.send_message(embed=embed)
         msg = await interaction.original_response()
 
@@ -127,7 +127,7 @@ class Vouch(commands.Cog):
     @app_commands.command(name="staffdeletevouch", description="Supprime un vouch (Staff uniquement)")
     @app_commands.describe(vouch_id="ID du vouch à supprimer")
     async def staffdeletevouch(self, interaction: discord.Interaction, vouch_id: int):
-        if not any(role.name == STAFF_ROLE_NAME for role in interaction.user.roles):
+        if not any(role.id == STAFF_ROLE_ID for role in interaction.user.roles):
             await interaction.response.send_message("❌ Tu n'as pas la permission d'utiliser cette commande.", ephemeral=True)
             return
 
@@ -148,7 +148,7 @@ class Vouch(commands.Cog):
     # ----- /resetvouch -----
     @app_commands.command(name="resetvouch", description="Réinitialise tous les vouches (Staff uniquement)")
     async def resetvouch(self, interaction: discord.Interaction):
-        if not any(role.name == STAFF_ROLE_NAME for role in interaction.user.roles):
+        if not any(role.id == STAFF_ROLE_ID for role in interaction.user.roles):
             await interaction.response.send_message("❌ Tu n'as pas la permission d'utiliser cette commande.", ephemeral=True)
             return
 
@@ -167,5 +167,6 @@ class Vouch(commands.Cog):
         await interaction.response.send_message("✅ Tous les vouches ont été réinitialisés.", ephemeral=True)
 
 
+# ----- SETUP -----
 async def setup(bot):
     await bot.add_cog(Vouch(bot))
