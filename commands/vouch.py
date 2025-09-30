@@ -3,7 +3,6 @@ from discord import app_commands
 from discord.ext import commands
 from datetime import datetime
 
-# Liste des items disponibles (à mettre depuis ton shop)
 ITEMS = [
     "Nitro Boost 1 Month",
     "Nitro Boost 1 Year",
@@ -11,16 +10,18 @@ ITEMS = [
     "Server Boost 14x"
 ]
 
-# Liste des moyens de paiement autorisés
 PAYMENTS = ["PayPal", "LTC"]
 
-# Compteur de vouch (simple, à remplacer par une DB si tu veux garder l'historique après reboot)
 vouch_counter = 0
+vouches = {}  # clé = vouch_id, valeur = dict {message, author_id}
+
+STAFF_ROLE_NAME = "Staff"  # <-- adapte selon ton serveur
 
 class Vouch(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+    # ----- COMMAND /vouch -----
     @app_commands.command(name="vouch", description="Donne ton avis sur un service")
     @app_commands.describe(
         vendeur="Mentionne le vendeur",
@@ -52,20 +53,13 @@ class Vouch(commands.Cog):
         commentaire: str = "Aucun commentaire",
         anonyme: str = "Non"
     ):
-        """Slash command /vouch"""
         global vouch_counter
         vouch_counter += 1
 
-        # Gestion anonymat
         acheteur_display = interaction.user.mention if anonyme == "Non" else "👤 Anonyme"
-
-        # Étoiles
         stars = "⭐" * note
-
-        # Date formatée
         date_str = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
-        # Embed façon fiche
         embed = discord.Embed(
             title=f"New Vouch de {interaction.user.display_name}",
             color=discord.Color.gold()
@@ -77,13 +71,61 @@ class Vouch(commands.Cog):
         embed.add_field(name="Vouch par", value=acheteur_display, inline=True)
         embed.add_field(name="Date du vouch", value=date_str, inline=True)
         embed.add_field(name="Commentaire", value=commentaire, inline=False)
-
-        # Avatar de l’acheteur en miniature
         embed.set_thumbnail(url=interaction.user.display_avatar.url)
+        embed.set_footer(text="Service proposé par FastShop • Optimisé")
 
-        embed.set_footer(text="Service proposé par Lightvault • Optimisé")
+        msg = await interaction.response.send_message(embed=embed)
+        vouches[vouch_counter] = {"message": await interaction.original_response(), "author_id": interaction.user.id}
 
-        await interaction.response.send_message(embed=embed)
+    # ----- COMMAND /deletevouch (Membre) -----
+    @app_commands.command(name="deletevouch", description="Supprime ton propre vouch")
+    @app_commands.describe(vouch_id="ID du vouch à supprimer")
+    async def deletevouch(self, interaction: discord.Interaction, vouch_id: int):
+        if vouch_id in vouches:
+            if vouches[vouch_id]["author_id"] != interaction.user.id:
+                await interaction.response.send_message("❌ Tu ne peux supprimer que tes propres vouches.", ephemeral=True)
+                return
+            try:
+                await vouches[vouch_id]["message"].delete()
+                del vouches[vouch_id]
+                await interaction.response.send_message(f"✅ Ton vouch **#{vouch_id}** a été supprimé.", ephemeral=True)
+            except discord.NotFound:
+                await interaction.response.send_message("⚠️ Ce vouch n'existe plus.", ephemeral=True)
+        else:
+            await interaction.response.send_message("❌ Aucun vouch trouvé avec cet ID.", ephemeral=True)
+
+    # ----- COMMAND /staffdeletevouch (Staff) -----
+    @app_commands.command(name="staffdeletevouch", description="Supprime un vouch (Staff uniquement)")
+    @app_commands.describe(vouch_id="ID du vouch à supprimer")
+    async def staffdeletevouch(self, interaction: discord.Interaction, vouch_id: int):
+        if not any(role.name == STAFF_ROLE_NAME for role in interaction.user.roles):
+            await interaction.response.send_message("❌ Tu n'as pas la permission d'utiliser cette commande.", ephemeral=True)
+            return
+        if vouch_id in vouches:
+            try:
+                await vouches[vouch_id]["message"].delete()
+                del vouches[vouch_id]
+                await interaction.response.send_message(f"✅ Le vouch **#{vouch_id}** a été supprimé.", ephemeral=True)
+            except discord.NotFound:
+                await interaction.response.send_message("⚠️ Ce vouch n'existe plus.", ephemeral=True)
+        else:
+            await interaction.response.send_message("❌ Aucun vouch trouvé avec cet ID.", ephemeral=True)
+
+    # ----- COMMAND /resetvouch (Staff) -----
+    @app_commands.command(name="resetvouch", description="Réinitialise tous les vouches (Staff uniquement)")
+    async def resetvouch(self, interaction: discord.Interaction):
+        if not any(role.name == STAFF_ROLE_NAME for role in interaction.user.roles):
+            await interaction.response.send_message("❌ Tu n'as pas la permission d'utiliser cette commande.", ephemeral=True)
+            return
+        for v in vouches.values():
+            try:
+                await v["message"].delete()
+            except:
+                continue
+        vouches.clear()
+        global vouch_counter
+        vouch_counter = 0
+        await interaction.response.send_message("✅ Tous les vouches ont été réinitialisés.", ephemeral=True)
 
 async def setup(bot):
     await bot.add_cog(Vouch(bot))
