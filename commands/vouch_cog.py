@@ -15,8 +15,7 @@ ITEMS = [
     "Décoration"
 ]
 PAYMENTS = ["PayPal", "LTC"]
-
-STAFF_ROLE_ID = 1418652782625296445  # <-- ID du rôle Staff
+STAFF_ROLE_ID = 1418652782625296445  # Remplace par l'ID réel du role Staff
 VOUCH_FILE = "vouches.json"
 
 # ----- LOAD VOUCHES -----
@@ -51,30 +50,18 @@ class Vouch(commands.Cog):
         anonyme="Rendre le vouch anonyme ? Oui / Non"
     )
     @app_commands.choices(
-        item=[discord.app_commands.Choice(name=i, value=i) for i in ITEMS],
-        moyen_de_paiement=[discord.app_commands.Choice(name=p, value=p) for p in PAYMENTS],
-        note=[discord.app_commands.Choice(name=str(i), value=i) for i in range(1, 6)],
-        anonyme=[
-            discord.app_commands.Choice(name="Oui", value="Oui"),
-            discord.app_commands.Choice(name="Non", value="Non")
-        ]
+        item=[app_commands.Choice(name=i, value=i) for i in ITEMS],
+        moyen_de_paiement=[app_commands.Choice(name=p, value=p) for p in PAYMENTS],
+        note=[app_commands.Choice(name=str(i), value=i) for i in range(1,6)],
+        anonyme=[app_commands.Choice(name="Oui", value="Oui"), app_commands.Choice(name="Non", value="Non")]
     )
-    async def vouch(
-        self, interaction: discord.Interaction,
-        vendeur: discord.Member,
-        quantite: int,
-        item: str,
-        prix: str,
-        moyen_de_paiement: str,
-        note: int,
-        commentaire: str = "Aucun commentaire",
-        anonyme: str = "Non"
-    ):
+    async def vouch(self, interaction: discord.Interaction, vendeur: discord.Member, quantite: int,
+                    item: str, prix: str, moyen_de_paiement: str, note: int,
+                    commentaire: str = "Aucun commentaire", anonyme: str = "Non"):
         global vouch_counter
         vouch_counter += 1
-
         acheteur_display = interaction.user.mention if anonyme == "Non" else "👤 Anonyme"
-        stars = "⭐" * note
+        stars = "⭐"*note
         date_str = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
         embed = discord.Embed(
@@ -88,17 +75,11 @@ class Vouch(commands.Cog):
         embed.add_field(name="Vouch par", value=acheteur_display, inline=True)
         embed.add_field(name="Date du vouch", value=date_str, inline=True)
         embed.add_field(name="Commentaire", value=commentaire, inline=False)
-        embed.set_thumbnail(url=interaction.user.display_avatar.url)
         embed.set_footer(text="Service proposé par FastShop • Optimisé")
-
         await interaction.response.send_message(embed=embed)
         msg = await interaction.original_response()
 
-        vouches[vouch_counter] = {
-            "message_id": msg.id,
-            "channel_id": msg.channel.id,
-            "author_id": interaction.user.id
-        }
+        vouches[vouch_counter] = {"message_id": msg.id, "channel_id": msg.channel.id, "author_id": interaction.user.id}
         save_vouches()
 
     # ----- /deletevouch -----
@@ -108,11 +89,9 @@ class Vouch(commands.Cog):
         if vouch_id not in vouches:
             await interaction.response.send_message("❌ Aucun vouch trouvé avec cet ID.", ephemeral=True)
             return
-
         if vouches[vouch_id]["author_id"] != interaction.user.id:
             await interaction.response.send_message("❌ Tu ne peux supprimer que tes propres vouches.", ephemeral=True)
             return
-
         try:
             channel = self.bot.get_channel(vouches[vouch_id]["channel_id"])
             msg = await channel.fetch_message(vouches[vouch_id]["message_id"])
@@ -130,11 +109,9 @@ class Vouch(commands.Cog):
         if not any(role.id == STAFF_ROLE_ID for role in interaction.user.roles):
             await interaction.response.send_message("❌ Tu n'as pas la permission d'utiliser cette commande.", ephemeral=True)
             return
-
         if vouch_id not in vouches:
             await interaction.response.send_message("❌ Aucun vouch trouvé avec cet ID.", ephemeral=True)
             return
-
         try:
             channel = self.bot.get_channel(vouches[vouch_id]["channel_id"])
             msg = await channel.fetch_message(vouches[vouch_id]["message_id"])
@@ -151,7 +128,6 @@ class Vouch(commands.Cog):
         if not any(role.id == STAFF_ROLE_ID for role in interaction.user.roles):
             await interaction.response.send_message("❌ Tu n'as pas la permission d'utiliser cette commande.", ephemeral=True)
             return
-
         for v in list(vouches.values()):
             try:
                 channel = self.bot.get_channel(v["channel_id"])
@@ -159,14 +135,11 @@ class Vouch(commands.Cog):
                 await msg.delete()
             except:
                 continue
-
         vouches.clear()
         global vouch_counter
         vouch_counter = 0
         save_vouches()
         await interaction.response.send_message("✅ Tous les vouches ont été réinitialisés.", ephemeral=True)
 
-
-# ----- SETUP -----
 async def setup(bot):
     await bot.add_cog(Vouch(bot))
