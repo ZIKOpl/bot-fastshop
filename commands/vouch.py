@@ -1,6 +1,7 @@
 import discord
 from discord import app_commands
 from discord.ext import commands
+from datetime import datetime
 
 # Liste des items disponibles (à mettre depuis ton shop)
 ITEMS = [
@@ -12,6 +13,9 @@ ITEMS = [
 
 # Liste des moyens de paiement autorisés
 PAYMENTS = ["PayPal", "LTC"]
+
+# Compteur de vouch (simple, à remplacer par une DB si tu veux garder l'historique après reboot)
+vouch_counter = 0
 
 class Vouch(commands.Cog):
     def __init__(self, bot):
@@ -49,26 +53,35 @@ class Vouch(commands.Cog):
         anonyme: str = "Non"
     ):
         """Slash command /vouch"""
+        global vouch_counter
+        vouch_counter += 1
 
         # Gestion anonymat
-        vendeur_display = vendeur.mention if anonyme == "Non" else "👤 Anonyme"
+        acheteur_display = interaction.user.mention if anonyme == "Non" else "👤 Anonyme"
 
         # Étoiles
         stars = "⭐" * note
 
+        # Date formatée
+        date_str = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+
+        # Embed façon fiche
         embed = discord.Embed(
-            title=f"📝 Nouveau Vouch",
+            title=f"New Vouch de {interaction.user.display_name}",
             color=discord.Color.gold()
         )
-        embed.add_field(name="👤 Vendeur", value=vendeur_display, inline=True)
-        embed.add_field(name="📦 Quantité", value=str(quantite), inline=True)
-        embed.add_field(name="🎁 Item", value=item, inline=True)
-        embed.add_field(name="💰 Prix", value=prix, inline=True)
-        embed.add_field(name="💳 Paiement", value=moyen_de_paiement, inline=True)
-        embed.add_field(name="⭐ Note", value=stars, inline=False)
-        embed.add_field(name="💬 Commentaire", value=commentaire, inline=False)
+        embed.add_field(name="Note", value=stars, inline=False)
+        embed.add_field(name="Vendeur", value=vendeur.mention, inline=False)
+        embed.add_field(name="Item vendu :", value=f"x{quantite} {item} ({prix} via {moyen_de_paiement})", inline=False)
+        embed.add_field(name="Vouch N°", value=str(vouch_counter), inline=True)
+        embed.add_field(name="Vouch par", value=acheteur_display, inline=True)
+        embed.add_field(name="Date du vouch", value=date_str, inline=True)
+        embed.add_field(name="Commentaire", value=commentaire, inline=False)
 
-        embed.set_footer(text="Système de Vouch • Optimisé")
+        # Avatar de l’acheteur en miniature
+        embed.set_thumbnail(url=interaction.user.display_avatar.url)
+
+        embed.set_footer(text="Service proposé par Lightvault • Optimisé")
 
         await interaction.response.send_message(embed=embed)
 
