@@ -2,13 +2,14 @@ import os
 import asyncio
 import discord
 from discord.ext import commands
-from flask_keepalive import keep_alive
+from keep_alive import keep_alive  # <-- on importe ton serveur Flask
 
 # === CONFIG ===
 DISCORD_TOKEN = os.environ.get("DISCORD_TOKEN")
 
 # Intents
 intents = discord.Intents.default()
+intents.message_content = True  # Important si tu veux lire le contenu des messages
 bot = commands.Bot(command_prefix=".", intents=intents)
 
 # Charger toutes les commandes du dossier commands/
@@ -28,5 +29,5 @@ async def main():
         await bot.start(DISCORD_TOKEN)
 
 if __name__ == "__main__":
-    keep_alive()  # Flask pour Render
+    keep_alive()  # Lance Flask pour Render
     asyncio.run(main())
