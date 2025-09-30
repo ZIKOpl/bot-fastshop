@@ -1,20 +1,51 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
+import os
+import asyncio
+from flask import Flask
+import threading
 
-class Ping(commands.Cog):
-    def __init__(self, bot):
-        self.bot = bot
+# ------------------------------
+# Flask pour UptimeRobot
+# ------------------------------
+app = Flask("")
 
-    @app_commands.command(name="ping", description="Teste la latence du bot")
-    async def ping(self, interaction: discord.Interaction):
-        embed = discord.Embed(
-            title="🏓 Pong !",
-            color=discord.Color.blue()
-        )
-        embed.add_field(name="Latence API", value=f"{round(self.bot.latency*1000)} ms", inline=True)
-        embed.set_footer(text=f"Demandé par {interaction.user.display_name}")
-        await interaction.response.send_message(embed=embed)
+@app.route("/")
+def home():
+    return "Bot FastShop en ligne ✅"
 
-async def setup(bot):
-    await bot.add_cog(Ping(bot))
+def run_flask():
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
+
+# Thread daemon pour ne pas bloquer le bot
+flask_thread = threading.Thread(target=run_flask)
+flask_thread.daemon = True
+flask_thread.start()
+
+# ------------------------------
+# Bot Discord
+# ------------------------------
+TOKEN = os.environ.get("DISCORD_TOKEN")
+
+intents = discord.Intents.default()
+intents.members = True
+
+bot = commands.Bot(command_prefix="/", intents=intents)
+
+# Chargement des cogs
+async def load_cogs():
+    for cog in ["commands.ping_cog", "commands.vouch_cog"]:
+        try:
+            await bot.load_extension(cog)
+            print(f"[COG] {cog} chargé ✅")
+        except Exception as e:
+            print(f"[COG] Erreur en chargeant {cog} : {e}")
+
+@bot.event
+async def on_ready():
+    print(f"Bot {bot.user} en ligne ! ✅")
+
+# On démarre le bot sans asyncio.run
+bot.loop.create_task(load_cogs())
+bot.run(TOKEN)
