@@ -44,22 +44,22 @@ module.exports = {
         )
         .addIntegerOption(option =>
             option.setName('note')
-                  .setDescription('Note 1-5')
-                  .setRequired(true)
-        )
-        .addStringOption(option =>
-            option.setName('commentaire')
-                  .setDescription('Commentaire')
-                  .setRequired(false)
+                .setDescription('Note 1-5')
+                .setRequired(true)
         )
         .addStringOption(option =>
             option.setName('anonyme')
-                  .setDescription('Anonyme ?')
-                  .setRequired(true)
-                  .addChoices(
-                      { name: 'Oui', value: 'oui' },
-                      { name: 'Non', value: 'non' }
-                  )
+                .setDescription('Anonyme ?')
+                .setRequired(true)
+                .addChoices(
+                    { name: 'Oui', value: 'oui' },
+                    { name: 'Non', value: 'non' }
+                )
+        )
+        .addStringOption(option =>
+            option.setName('commentaire')
+                .setDescription('Commentaire')
+                .setRequired(false)
         ),
     async execute(interaction) {
         const vendeur = interaction.options.getUser('vendeur');
