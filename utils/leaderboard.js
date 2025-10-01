@@ -26,12 +26,13 @@ async function updateLeaderboard(client, vouches) {
         .setColor(0x3498db)
         .setFooter({ text: "Automatically updated" });
 
-    let totalRep = 0;
     let desc = "";
+    let totalRep = 0;
 
     sorted.forEach(([id, rep], i) => {
         totalRep += rep;
-        desc += `${i + 1}. <@${id}> : ${rep} Rep\n`;
+        if (i < 3) desc += `🥇`.repeat(i === 0 ? 1 : i === 1 ? 1 : 1) + ` **<@${id}> : ${rep} Rep**\n`;
+        else desc += `${i + 1}. <@${id}> : ${rep} Rep\n`;
     });
 
     desc += `\nTotal de rep : ${totalRep}`;
@@ -43,4 +44,4 @@ async function updateLeaderboard(client, vouches) {
     else await channel.send({ embeds: [embed] });
 }
 
-module.exports = { updateLeaderboard, saveVouches };
+module.exports = { updateLeaderboard, saveVouches, VOUCH_FILE };
