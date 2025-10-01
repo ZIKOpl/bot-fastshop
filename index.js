@@ -1,9 +1,9 @@
-// index.js
 require('dotenv').config();
 const fs = require("fs");
 const path = require("path");
 const express = require("express");
-const { Client, Collection, GatewayIntentBits } = require("discord.js");
+const { Client, Collection, GatewayIntentBits, Events } = require("discord.js");
+const { updateLeaderboard } = require("./utils/leaderboard"); // Import du leaderboard utils
 
 const app = express();
 const PORT = process.env.PORT || 10000;
@@ -32,36 +32,46 @@ function saveLeaderboard() {
 }
 
 // ----- Ready event -----
-client.once("ready", async () => {
-    console.log(`${client.user.tag} ready!`);
+client.once(Events.ClientReady, async () => {
+    console.log(`💙 ${client.user.tag} ready!`);
 
-    // Sync commands for testing on a specific guild
-    const guildId = process.env.GUILD_ID; // mettre ton GUILD_ID dans Render
+    // Synchronisation des commandes
+    const guildId = process.env.GUILD_ID;
     if (guildId) {
-        const guild = client.guilds.cache.get(guildId);
+        const guild = await client.guilds.fetch(guildId);
         if (guild) {
             await guild.commands.set(client.commands.map(cmd => cmd.data.toJSON()));
             console.log("✅ Commandes synchronisées avec le serveur.");
         }
     } else {
-        // global commands (peut prendre jusqu'à 1h pour apparaître)
         await client.application.commands.set(client.commands.map(cmd => cmd.data.toJSON()));
         console.log("✅ Commandes globales synchronisées.");
+    }
+
+    // Mettre à jour le leaderboard au démarrage si des vouches existent
+    if (Object.keys(leaderboard).length > 0) {
+        try {
+            await updateLeaderboard(client, leaderboard);
+        } catch (err) {
+            console.error("❌ Erreur lors de la mise à jour du leaderboard au démarrage :", err);
+        }
     }
 });
 
 // ----- Interaction event -----
-client.on("interactionCreate", async interaction => {
+client.on(Events.InteractionCreate, async interaction => {
     if (!interaction.isCommand()) return;
 
     const command = client.commands.get(interaction.commandName);
     if (!command) return;
 
     try {
-        await command.execute(interaction, leaderboard, saveLeaderboard);
+        await command.execute(interaction, leaderboard, saveLeaderboard, client);
     } catch (error) {
         console.error(error);
-        await interaction.reply({ content: "❌ Une erreur est survenue.", ephemeral: true });
+        if (!interaction.replied) {
+            await interaction.reply({ content: "❌ Une erreur est survenue.", flags: 64 }); // flags:64 = ephemeral
+        }
     }
 });
 
