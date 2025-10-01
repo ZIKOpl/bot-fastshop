@@ -53,4 +53,8 @@ async function updateLeaderboard(client, vouches) {
     else await channel.send({ embeds: [embed] });
 }
 
+<<<<<<< HEAD
 module.exports = { updateLeaderboard, saveVouches, VOUCH_FILE };
+=======
+module.exports = { updateLeaderboard, saveVouches, VOUCH_FILE };
+>>>>>>> 8fe9979b9a497d052130ccaf475e21bb0506e2e6

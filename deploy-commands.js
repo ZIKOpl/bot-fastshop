@@ -36,4 +36,8 @@ const rest = new REST({ version: '10' }).setToken(token);
     } catch (error) {
         console.error(error);
     }
+<<<<<<< HEAD
 })();p
+=======
+})();p
+>>>>>>> 8fe9979b9a497d052130ccaf475e21bb0506e2e6

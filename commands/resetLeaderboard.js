@@ -12,4 +12,8 @@ module.exports = {
         saveVouches({});
         await interaction.reply({ content: 'Leaderboard réinitialisé ! ✅', ephemeral: true });
     }
+<<<<<<< HEAD
 };
+=======
+};
+>>>>>>> 8fe9979b9a497d052130ccaf475e21bb0506e2e6
