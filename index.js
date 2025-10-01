@@ -3,7 +3,7 @@ const fs = require("fs");
 const path = require("path");
 const express = require("express");
 const { Client, Collection, GatewayIntentBits, Events } = require("discord.js");
-const { updateLeaderboard } = require("./utils/leaderboard"); // Import du leaderboard utils
+const { updateLeaderboard } = require("./utils/leaderboard");
 
 const app = express();
 const PORT = process.env.PORT || 10000;
@@ -40,12 +40,11 @@ client.once(Events.ClientReady, async () => {
         try {
             await updateLeaderboard(client, leaderboard);
         } catch (err) {
-            console.error("❌ Erreur lors de la mise à jour du leaderboard au démarrage :", err);
+            console.error("❌ Erreur lors de la mise à jour du leaderboard :", err);
         }
     }
 
-    // Commandes guild synchronisées **manuellement via deploy-commands.js**
-    console.log("✅ Bot prêt, commandes slash à synchroniser via 'npm run deploy'");
+    console.log("✅ Bot prêt, commandes à déployer via 'npm run deploy'");
 });
 
 // ----- Interaction event -----
@@ -60,7 +59,7 @@ client.on(Events.InteractionCreate, async interaction => {
     } catch (error) {
         console.error(error);
         if (!interaction.replied) {
-            await interaction.reply({ content: "❌ Une erreur est survenue.", flags: 64 }); // ephemeral
+            await interaction.reply({ content: "❌ Une erreur est survenue.", flags: 64 });
         }
     }
 });
