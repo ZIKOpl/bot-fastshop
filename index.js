@@ -35,7 +35,16 @@ function saveLeaderboard() {
 client.once(Events.ClientReady, async () => {
     console.log(`💙 ${client.user.tag} ready!`);
 
-    // Mettre à jour le leaderboard au démarrage si des vouches existent
+    // Synchronisation des commandes guild
+    if (process.env.GUILD_ID) {
+        const guild = await client.guilds.fetch(process.env.GUILD_ID);
+        if (guild) {
+            await guild.commands.set(client.commands.map(cmd => cmd.data.toJSON()));
+            console.log("✅ Commandes synchronisées avec le serveur.");
+        }
+    }
+
+    // Mettre à jour le leaderboard au démarrage
     if (Object.keys(leaderboard).length > 0) {
         try {
             await updateLeaderboard(client, leaderboard);
@@ -43,8 +52,6 @@ client.once(Events.ClientReady, async () => {
             console.error("❌ Erreur lors de la mise à jour du leaderboard :", err);
         }
     }
-
-    console.log("✅ Bot prêt, commandes à déployer via 'npm run deploy'");
 });
 
 // ----- Interaction event -----
@@ -65,15 +72,8 @@ client.on(Events.InteractionCreate, async interaction => {
 });
 
 // ----- Express Web Server -----
-app.get("/", (req, res) => {
-    res.send("Bot FastShop en ligne 🎉");
-});
-
-app.listen(PORT, () => {
-    console.log(`🌐 Web server running on port ${PORT}`);
-});
+app.get("/", (req, res) => res.send("Bot FastShop en ligne 🎉"));
+app.listen(PORT, () => console.log(`🌐 Web server running on port ${PORT}`));
 
 // ----- Login -----
-client.login(process.env.BOT_TOKEN).catch(err => {
-    console.error("❌ Impossible de se connecter avec le BOT_TOKEN :", err);
-});
+client.login(process.env.BOT_TOKEN);
