@@ -35,15 +35,6 @@ function saveLeaderboard() {
 client.once(Events.ClientReady, async () => {
     console.log(`💙 ${client.user.tag} ready!`);
 
-    // Synchronisation des commandes guild
-    if (process.env.GUILD_ID) {
-        const guild = await client.guilds.fetch(process.env.GUILD_ID);
-        if (guild) {
-            await guild.commands.set(client.commands.map(cmd => cmd.data.toJSON()));
-            console.log("✅ Commandes synchronisées avec le serveur.");
-        }
-    }
-
     // Mettre à jour le leaderboard au démarrage
     if (Object.keys(leaderboard).length > 0) {
         try {
