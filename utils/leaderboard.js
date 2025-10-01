@@ -13,6 +13,15 @@ async function updateLeaderboard(client, vouches) {
     const channel = await client.channels.fetch(LEADERBOARD_CHANNEL_ID);
     if (!channel) return;
 
+    const messages = await channel.messages.fetch({ limit: 10 });
+    const msg = messages.find(m => m.author.id === client.user.id);
+
+    // Si aucune vouch, supprime le message existant ou ne crée rien
+    if (Object.keys(vouches).length === 0) {
+        if (msg) await msg.delete();
+        return;
+    }
+
     const repMap = {};
     for (const v of Object.values(vouches)) {
         if (!repMap[v.vendeur_id]) repMap[v.vendeur_id] = 0;
@@ -31,15 +40,15 @@ async function updateLeaderboard(client, vouches) {
 
     sorted.forEach(([id, rep], i) => {
         totalRep += rep;
-        if (i < 3) desc += `🥇`.repeat(i === 0 ? 1 : i === 1 ? 1 : 1) + ` **<@${id}> : ${rep} Rep**\n`;
+        if (i === 0) desc += `🥇 <@${id}> : ${rep} Rep\n`;
+        else if (i === 1) desc += `🥈 <@${id}> : ${rep} Rep\n`;
+        else if (i === 2) desc += `🥉 <@${id}> : ${rep} Rep\n`;
         else desc += `${i + 1}. <@${id}> : ${rep} Rep\n`;
     });
 
     desc += `\nTotal de rep : ${totalRep}`;
-    embed.setDescription(desc || "Aucun vouch pour le moment");
+    embed.setDescription(desc);
 
-    const messages = await channel.messages.fetch({ limit: 10 });
-    const msg = messages.find(m => m.author.id === client.user.id);
     if (msg) await msg.edit({ embeds: [embed] });
     else await channel.send({ embeds: [embed] });
 }
