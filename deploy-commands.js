@@ -11,27 +11,20 @@ const rest = new REST({ version: '10' }).setToken(token);
 
 (async () => {
     try {
-        console.log('🔄 Suppression de toutes les commandes guild existantes...');
-        await rest.put(
-            Routes.applicationGuildCommands(clientId, guildId),
-            { body: [] }
-        );
+        console.log('🔄 Suppression des commandes guild existantes...');
+        await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: [] });
         console.log('✅ Commandes guild supprimées.');
 
         // Lecture des commandes
         const commands = [];
         const commandFiles = fs.readdirSync(path.join(__dirname, 'commands')).filter(file => file.endsWith('.js'));
-
         for (const file of commandFiles) {
             const command = require(`./commands/${file}`);
             if (command.data) commands.push(command.data.toJSON());
         }
 
         console.log('🔄 Déploiement des commandes actuelles...');
-        await rest.put(
-            Routes.applicationGuildCommands(clientId, guildId),
-            { body: commands }
-        );
+        await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: commands });
         console.log('✅ Commandes déployées avec succès !');
     } catch (error) {
         console.error(error);
