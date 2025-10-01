@@ -1,14 +1,13 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-
+const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
 let vouchCount = 1;
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('vouch')
-        .setDescription('Donne ton avis sur un service')
-        .addUserOption(o => o.setName('vendeur').setDescription('Mentionne le vendeur').setRequired(true))
-        .addIntegerOption(o => o.setName('quantite').setDescription('Quantité achetée').setRequired(true))
-        .addStringOption(o => o.setName('item').setDescription("Choisis l'item").setRequired(true)
+        .setName("vouch")
+        .setDescription("Donne ton avis sur un service")
+        .addUserOption(o => o.setName("vendeur").setDescription("Mentionne le vendeur").setRequired(true))
+        .addIntegerOption(o => o.setName("quantite").setDescription("Quantité achetée").setRequired(true))
+        .addStringOption(o => o.setName("item").setDescription("Choisis l'item").setRequired(true)
             .addChoices(
                 { name: 'Nitro Boost 1 Month', value: 'Nitro Boost 1 Month' },
                 { name: 'Nitro Basic 1 Month', value: 'Nitro Basic 1 Month' },
@@ -17,33 +16,39 @@ module.exports = {
                 { name: 'Message Réaction', value: 'Message Réaction' },
                 { name: 'Décoration', value: 'Décoration' }
             ))
-        .addStringOption(o => o.setName('prix').setDescription('Prix payé').setRequired(true))
-        .addStringOption(o => o.setName('moyen_de_paiement').setDescription('Moyen de paiement').setRequired(true)
+        .addStringOption(o => o.setName("prix").setDescription("Prix payé").setRequired(true))
+        .addStringOption(o => o.setName("moyen_de_paiement").setDescription("Moyen de paiement").setRequired(true)
             .addChoices(
-                { name: 'Paypal', value: 'Paypal' },
-                { name: 'LTC', value: 'Litecoin' }
+                { name: "Paypal", value: "Paypal" },
+                { name: "LTC", value: "Litecoin" }
             ))
-        .addIntegerOption(o => o.setName('note').setDescription('Note 1-5').setRequired(true))
-        .addStringOption(o => o.setName('anonyme').setDescription('Anonyme ?').setRequired(true)
-            .addChoices(
-                { name: 'Oui', value: 'oui' },
-                { name: 'Non', value: 'non' }
-            ))
-        .addStringOption(o => o.setName('commentaire').setDescription('Commentaire').setRequired(false)),
+        .addIntegerOption(o => o.setName("note").setDescription("Note 1-5").setRequired(true))
+        .addStringOption(o => o.setName("anonyme").setDescription("Anonyme ?").setRequired(true)
+            .addChoices({ name: "Oui", value: "oui" }, { name: "Non", value: "non" }))
+        .addStringOption(o => o.setName("commentaire").setDescription("Commentaire").setRequired(false)),
 
-    async execute(interaction) {
-        const vendeur = interaction.options.getUser('vendeur');
-        const quantite = interaction.options.getInteger('quantite');
-        const item = interaction.options.getString('item');
-        const prix = interaction.options.getString('prix');
-        const moyen = interaction.options.getString('moyen_de_paiement');
-        const note = interaction.options.getInteger('note');
-        const commentaire = interaction.options.getString('commentaire') || 'Aucun commentaire.';
-        const anonyme = interaction.options.getString('anonyme') === 'oui';
-        const user = anonyme ? 'Anonyme' : `<@${interaction.user.id}>`;
+    async execute(interaction, leaderboard, saveLeaderboard, client) {
+        const vendeur = interaction.options.getUser("vendeur");
+        const quantite = interaction.options.getInteger("quantite");
+        const item = interaction.options.getString("item");
+        const prix = interaction.options.getString("prix");
+        const moyen = interaction.options.getString("moyen_de_paiement");
+        const note = interaction.options.getInteger("note");
+        const commentaire = interaction.options.getString("commentaire") || "Aucun commentaire.";
+        const anonyme = interaction.options.getString("anonyme") === "oui";
+        const user = anonyme ? "Anonyme" : `<@${interaction.user.id}>`;
 
+        // Stocker la vouch
+        leaderboard[vouchCount] = {
+            vendeur_id: vendeur.id,
+            note,
+            commentaire,
+            user_id: interaction.user.id
+        };
+        saveLeaderboard(leaderboard);
+
+        // Embed
         const stars = '⭐'.repeat(note) + '☆'.repeat(5 - note);
-
         const embed = new EmbedBuilder()
             .setTitle(`New Vouch de ${interaction.user.username}`)
             .setColor('#3366FF')
@@ -64,8 +69,14 @@ module.exports = {
 
         await channel.send({ embeds: [embed] });
 
-        vouchCount++;
+        // Mettre à jour le leaderboard après chaque vouch
+        try {
+            await updateLeaderboard(client, leaderboard);
+        } catch (err) {
+            console.error("❌ Erreur lors de la mise à jour du leaderboard :", err);
+        }
 
+        vouchCount++;
         await interaction.reply({ content: "Ton vouch a été envoyé ! ✅", ephemeral: true });
     }
 };
