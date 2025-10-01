@@ -3,15 +3,13 @@ const fs = require("fs");
 const path = require("path");
 
 const VOUCH_FILE = path.join(__dirname, "../leaderboard.json");
+const LEADERBOARD_CHANNEL_ID = process.env.LEADERBOARD_CHANNEL_ID;
 
 function saveVouches(vouches) {
     fs.writeFileSync(VOUCH_FILE, JSON.stringify(vouches, null, 4));
 }
 
 async function updateLeaderboard(client, vouches) {
-    const LEADERBOARD_CHANNEL_ID = process.env.LEADERBOARD_CHANNEL_ID;
-    if (!LEADERBOARD_CHANNEL_ID) return console.error("❌ Leaderboard channel ID manquant");
-
     const channel = await client.channels.fetch(LEADERBOARD_CHANNEL_ID).catch(() => null);
     if (!channel) return console.error("❌ Impossible de récupérer le channel leaderboard");
 
@@ -22,7 +20,6 @@ async function updateLeaderboard(client, vouches) {
     }
 
     const sorted = Object.entries(repMap).sort((a, b) => b[1] - a[1]);
-
     const embed = new EmbedBuilder()
         .setTitle("🍥 Sellers Leaderboard")
         .setColor(0x3498db)
