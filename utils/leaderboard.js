@@ -10,8 +10,23 @@ function saveVouches(vouches) {
 }
 
 async function updateLeaderboard(client, vouches) {
-    const channel = await client.channels.fetch(LEADERBOARD_CHANNEL_ID);
+    const channel = await client.channels.fetch(LEADERBOARD_CHANNEL_ID).catch(() => null);
     if (!channel) return;
+
+    const messages = await channel.messages.fetch({ limit: 10 });
+    const msg = messages.find(m => m.author.id === client.user.id);
+
+    const embed = new EmbedBuilder()
+        .setTitle("🍥 Sellers Leaderboard")
+        .setColor(0x3498db)
+        .setFooter({ text: "Automatically updated" });
+
+    if (Object.keys(vouches).length === 0) {
+        embed.setDescription("Aucun vouch pour le moment");
+        if (msg) await msg.edit({ embeds: [embed] });
+        else await channel.send({ embeds: [embed] });
+        return;
+    }
 
     const repMap = {};
     for (const v of Object.values(vouches)) {
@@ -20,27 +35,22 @@ async function updateLeaderboard(client, vouches) {
     }
 
     const sorted = Object.entries(repMap).sort((a, b) => b[1] - a[1]);
-
-    const embed = new EmbedBuilder()
-        .setTitle("🍥 Sellers Leaderboard")
-        .setColor(0x3498db)
-        .setFooter({ text: "Automatically updated" });
-
     let totalRep = 0;
     let desc = "";
 
     sorted.forEach(([id, rep], i) => {
         totalRep += rep;
-        desc += `${i + 1}. <@${id}> : ${rep} Rep\n`;
+        if (i === 0) desc += `🥇 <@${id}> : ${rep} Rep\n`;
+        else if (i === 1) desc += `🥈 <@${id}> : ${rep} Rep\n`;
+        else if (i === 2) desc += `🥉 <@${id}> : ${rep} Rep\n`;
+        else desc += `${i + 1}. <@${id}> : ${rep} Rep\n`;
     });
 
     desc += `\nTotal de rep : ${totalRep}`;
-    embed.setDescription(desc || "Aucun vouch pour le moment");
+    embed.setDescription(desc);
 
-    const messages = await channel.messages.fetch({ limit: 10 });
-    const msg = messages.find(m => m.author.id === client.user.id);
     if (msg) await msg.edit({ embeds: [embed] });
     else await channel.send({ embeds: [embed] });
 }
 
-module.exports = { updateLeaderboard, saveVouches };
+module.exports = { updateLeaderboard, saveVouches, VOUCH_FILE };
