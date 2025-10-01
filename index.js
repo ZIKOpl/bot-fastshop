@@ -43,6 +43,9 @@ client.once(Events.ClientReady, async () => {
             console.error("❌ Erreur lors de la mise à jour du leaderboard au démarrage :", err);
         }
     }
+
+    // Commandes guild synchronisées **manuellement via deploy-commands.js**
+    console.log("✅ Bot prêt, commandes slash à synchroniser via 'npm run deploy'");
 });
 
 // ----- Interaction event -----
@@ -57,7 +60,7 @@ client.on(Events.InteractionCreate, async interaction => {
     } catch (error) {
         console.error(error);
         if (!interaction.replied) {
-            await interaction.reply({ content: "❌ Une erreur est survenue.", flags: 64 }); // flags:64 = ephemeral
+            await interaction.reply({ content: "❌ Une erreur est survenue.", flags: 64 }); // ephemeral
         }
     }
 });
@@ -72,4 +75,6 @@ app.listen(PORT, () => {
 });
 
 // ----- Login -----
-client.login(process.env.BOT_TOKEN);
+client.login(process.env.BOT_TOKEN).catch(err => {
+    console.error("❌ Impossible de se connecter avec le BOT_TOKEN :", err);
+});
