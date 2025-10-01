@@ -21,8 +21,7 @@ module.exports = {
         .addStringOption(o => o.setName('moyen_de_paiement').setDescription('Moyen de paiement').setRequired(true)
             .addChoices(
                 { name: 'Paypal', value: 'Paypal' },
-                { name: 'Carte Bancaire', value: 'Carte Bancaire' },
-                { name: 'Autre', value: 'Autre' }
+                { name: 'litecoin', value: 'LTC' }
             ))
         .addIntegerOption(o => o.setName('note').setDescription('Note 1-5').setRequired(true))
         .addStringOption(o => o.setName('anonyme').setDescription('Anonyme ?').setRequired(true)
