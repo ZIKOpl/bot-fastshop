@@ -3,30 +3,20 @@ const fs = require("fs");
 const path = require("path");
 
 const VOUCH_FILE = path.join(__dirname, "../vouches.json");
-const LEADERBOARD_CHANNEL_ID = "1416537207564668978"; // Remplace par ton channel
+
+function loadVouches() {
+    if (!fs.existsSync(VOUCH_FILE)) return {};
+    return JSON.parse(fs.readFileSync(VOUCH_FILE));
+}
 
 function saveVouches(vouches) {
     fs.writeFileSync(VOUCH_FILE, JSON.stringify(vouches, null, 4));
 }
 
-async function updateLeaderboard(client, vouches) {
-    const channel = await client.channels.fetch(LEADERBOARD_CHANNEL_ID).catch(() => null);
+async function sendLeaderboard(client, channelId) {
+    const vouches = loadVouches();
+    const channel = await client.channels.fetch(channelId);
     if (!channel) return;
-
-    const messages = await channel.messages.fetch({ limit: 10 });
-    const msg = messages.find(m => m.author.id === client.user.id);
-
-    const embed = new EmbedBuilder()
-        .setTitle("🍥 Sellers Leaderboard")
-        .setColor(0x3498db)
-        .setFooter({ text: "Automatically updated" });
-
-    if (Object.keys(vouches).length === 0) {
-        embed.setDescription("Aucun vouch pour le moment");
-        if (msg) await msg.edit({ embeds: [embed] });
-        else await channel.send({ embeds: [embed] });
-        return;
-    }
 
     const repMap = {};
     for (const v of Object.values(vouches)) {
@@ -35,22 +25,23 @@ async function updateLeaderboard(client, vouches) {
     }
 
     const sorted = Object.entries(repMap).sort((a, b) => b[1] - a[1]);
+
+    const embed = new EmbedBuilder()
+        .setTitle("🍥 Seller Leaderboard")
+        .setColor(0x3498db)
+        .setFooter({ text: "Leaderboard mis à jour" });
+
     let totalRep = 0;
     let desc = "";
-
     sorted.forEach(([id, rep], i) => {
         totalRep += rep;
-        if (i === 0) desc += `🥇 <@${id}> : ${rep} Rep\n`;
-        else if (i === 1) desc += `🥈 <@${id}> : ${rep} Rep\n`;
-        else if (i === 2) desc += `🥉 <@${id}> : ${rep} Rep\n`;
-        else desc += `${i + 1}. <@${id}> : ${rep} Rep\n`;
+        desc += `${i + 1}. <@${id}> : ${rep} Rep\n`;
     });
 
     desc += `\nTotal de rep : ${totalRep}`;
-    embed.setDescription(desc);
+    embed.setDescription(desc || "Aucun vouch pour le moment");
 
-    if (msg) await msg.edit({ embeds: [embed] });
-    else await channel.send({ embeds: [embed] });
+    await channel.send({ embeds: [embed] });
 }
 
-module.exports = { updateLeaderboard, saveVouches, VOUCH_FILE };
+module.exports = { loadVouches, saveVouches, sendLeaderboard };

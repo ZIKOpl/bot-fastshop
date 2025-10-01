@@ -1,7 +1,7 @@
 require('dotenv').config();
-const { REST, Routes } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
+const { REST, Routes } = require('discord.js');
 
 const token = process.env.BOT_TOKEN;
 const clientId = process.env.CLIENT_ID;
@@ -18,9 +18,8 @@ const rest = new REST({ version: '10' }).setToken(token);
         );
         console.log('✅ Commandes guild supprimées.');
 
-        // Lecture des commandes
         const commands = [];
-        const commandFiles = fs.readdirSync(path.join(__dirname, 'commands')).filter(file => file.endsWith('.js'));
+        const commandFiles = fs.readdirSync(path.join(__dirname, 'commands')).filter(f => f.endsWith('.js'));
 
         for (const file of commandFiles) {
             const command = require(`./commands/${file}`);
