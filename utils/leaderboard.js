@@ -10,15 +10,21 @@ function saveVouches(vouches) {
 }
 
 async function updateLeaderboard(client, vouches) {
-    const channel = await client.channels.fetch(LEADERBOARD_CHANNEL_ID);
+    const channel = await client.channels.fetch(LEADERBOARD_CHANNEL_ID).catch(() => null);
     if (!channel) return;
 
     const messages = await channel.messages.fetch({ limit: 10 });
     const msg = messages.find(m => m.author.id === client.user.id);
 
-    // Si aucune vouch, supprime le message existant ou ne crée rien
+    const embed = new EmbedBuilder()
+        .setTitle("🍥 Sellers Leaderboard")
+        .setColor(0x3498db)
+        .setFooter({ text: "Automatically updated" });
+
     if (Object.keys(vouches).length === 0) {
-        if (msg) await msg.delete();
+        embed.setDescription("Aucun vouch pour le moment");
+        if (msg) await msg.edit({ embeds: [embed] });
+        else await channel.send({ embeds: [embed] });
         return;
     }
 
@@ -29,14 +35,8 @@ async function updateLeaderboard(client, vouches) {
     }
 
     const sorted = Object.entries(repMap).sort((a, b) => b[1] - a[1]);
-
-    const embed = new EmbedBuilder()
-        .setTitle("🍥 Sellers Leaderboard")
-        .setColor(0x3498db)
-        .setFooter({ text: "Automatically updated" });
-
-    let desc = "";
     let totalRep = 0;
+    let desc = "";
 
     sorted.forEach(([id, rep], i) => {
         totalRep += rep;
