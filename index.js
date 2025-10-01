@@ -35,19 +35,6 @@ function saveLeaderboard() {
 client.once(Events.ClientReady, async () => {
     console.log(`💙 ${client.user.tag} ready!`);
 
-    // Synchronisation des commandes
-    const guildId = process.env.GUILD_ID;
-    if (guildId) {
-        const guild = await client.guilds.fetch(guildId);
-        if (guild) {
-            await guild.commands.set(client.commands.map(cmd => cmd.data.toJSON()));
-            console.log("✅ Commandes synchronisées avec le serveur.");
-        }
-    } else {
-        await client.application.commands.set(client.commands.map(cmd => cmd.data.toJSON()));
-        console.log("✅ Commandes globales synchronisées.");
-    }
-
     // Mettre à jour le leaderboard au démarrage si des vouches existent
     if (Object.keys(leaderboard).length > 0) {
         try {
@@ -56,6 +43,9 @@ client.once(Events.ClientReady, async () => {
             console.error("❌ Erreur lors de la mise à jour du leaderboard au démarrage :", err);
         }
     }
+
+    // Commandes guild synchronisées **manuellement via deploy-commands.js**
+    console.log("✅ Bot prêt, commandes slash à synchroniser via 'npm run deploy'");
 });
 
 // ----- Interaction event -----
@@ -70,7 +60,7 @@ client.on(Events.InteractionCreate, async interaction => {
     } catch (error) {
         console.error(error);
         if (!interaction.replied) {
-            await interaction.reply({ content: "❌ Une erreur est survenue.", flags: 64 }); // flags:64 = ephemeral
+            await interaction.reply({ content: "❌ Une erreur est survenue.", flags: 64 }); // ephemeral
         }
     }
 });
@@ -85,4 +75,6 @@ app.listen(PORT, () => {
 });
 
 // ----- Login -----
-client.login(process.env.BOT_TOKEN);
+client.login(process.env.BOT_TOKEN).catch(err => {
+    console.error("❌ Impossible de se connecter avec le BOT_TOKEN :", err);
+});
