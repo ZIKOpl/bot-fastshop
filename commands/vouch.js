@@ -1,6 +1,10 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const fs = require('fs');
+const path = require('path');
+const { updateLeaderboard, saveVouches, VOUCH_FILE } = require('../utils/leaderboard');
 
-let vouchCount = 1; // À remplacer par une vraie base de données si tu veux garder les numéros
+let vouches = fs.existsSync(VOUCH_FILE) ? JSON.parse(fs.readFileSync(VOUCH_FILE)) : {};
+let vouchCount = Object.keys(vouches).length + 1;
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -21,7 +25,8 @@ module.exports = {
         .addStringOption(o => o.setName('moyen_de_paiement').setDescription('Moyen de paiement').setRequired(true)
             .addChoices(
                 { name: 'Paypal', value: 'Paypal' },
-                { name: 'litecoin', value: 'LTC' }
+                { name: 'Carte Bancaire', value: 'Carte Bancaire' },
+                { name: 'Autre', value: 'Autre' }
             ))
         .addIntegerOption(o => o.setName('note').setDescription('Note 1-5').setRequired(true))
         .addStringOption(o => o.setName('anonyme').setDescription('Anonyme ?').setRequired(true)
@@ -30,8 +35,8 @@ module.exports = {
                 { name: 'Non', value: 'non' }
             ))
         .addStringOption(o => o.setName('commentaire').setDescription('Commentaire').setRequired(false)),
-    
-    async execute(interaction) {
+
+    async execute(interaction, client) {
         const vendeur = interaction.options.getUser('vendeur');
         const quantite = interaction.options.getInteger('quantite');
         const item = interaction.options.getString('item');
@@ -44,9 +49,23 @@ module.exports = {
 
         const stars = '⭐'.repeat(note) + '☆'.repeat(5 - note);
 
+        // Sauvegarde
+        vouches[vouchCount] = {
+            vendeur_id: vendeur.id,
+            note,
+            auteur_id: interaction.user.id,
+            item,
+            quantite,
+            prix,
+            moyen,
+            commentaire,
+            date: new Date().toISOString()
+        };
+        saveVouches(vouches);
+
         const embed = new EmbedBuilder()
             .setTitle(`New Vouch de ${interaction.user.username}`)
-            .setColor('#3366FF') // 🟦 Couleur bleue
+            .setColor('#3366FF')
             .setThumbnail(vendeur.displayAvatarURL({ size: 1024 }))
             .addFields(
                 { name: 'Note', value: stars, inline: false },
@@ -59,15 +78,14 @@ module.exports = {
             )
             .setFooter({ text: 'Service proposé par Lightvault by 3keh' });
 
-        const channel = interaction.guild.channels.cache.get('1417943146653810859'); // Remplace l'ID
-
-        if (!channel) {
-            return interaction.reply({ content: "Channel introuvable.", ephemeral: true });
-        }
+        const channel = interaction.guild.channels.cache.get('1417943146653810859');
+        if (!channel) return interaction.reply({ content: "Channel introuvable.", ephemeral: true });
 
         await channel.send({ embeds: [embed] });
 
         vouchCount++;
+
+        await updateLeaderboard(client, vouches);
 
         await interaction.reply({ content: "Ton vouch a été envoyé ! ✅", ephemeral: true });
     }
