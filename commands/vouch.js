@@ -1,10 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const fs = require('fs');
-const path = require('path');
-const { updateLeaderboard, saveVouches, VOUCH_FILE } = require('../utils/leaderboard');
 
-let vouches = fs.existsSync(VOUCH_FILE) ? JSON.parse(fs.readFileSync(VOUCH_FILE)) : {};
-let vouchCount = Object.keys(vouches).length + 1;
+let vouchCount = 1;
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -25,8 +21,7 @@ module.exports = {
         .addStringOption(o => o.setName('moyen_de_paiement').setDescription('Moyen de paiement').setRequired(true)
             .addChoices(
                 { name: 'Paypal', value: 'Paypal' },
-                { name: 'Carte Bancaire', value: 'Carte Bancaire' },
-                { name: 'Autre', value: 'Autre' }
+                { name: 'LTC', value: 'Litecoin' }
             ))
         .addIntegerOption(o => o.setName('note').setDescription('Note 1-5').setRequired(true))
         .addStringOption(o => o.setName('anonyme').setDescription('Anonyme ?').setRequired(true)
@@ -36,7 +31,7 @@ module.exports = {
             ))
         .addStringOption(o => o.setName('commentaire').setDescription('Commentaire').setRequired(false)),
 
-    async execute(interaction, client) {
+    async execute(interaction) {
         const vendeur = interaction.options.getUser('vendeur');
         const quantite = interaction.options.getInteger('quantite');
         const item = interaction.options.getString('item');
@@ -48,20 +43,6 @@ module.exports = {
         const user = anonyme ? 'Anonyme' : `<@${interaction.user.id}>`;
 
         const stars = '⭐'.repeat(note) + '☆'.repeat(5 - note);
-
-        // Sauvegarde
-        vouches[vouchCount] = {
-            vendeur_id: vendeur.id,
-            note,
-            auteur_id: interaction.user.id,
-            item,
-            quantite,
-            prix,
-            moyen,
-            commentaire,
-            date: new Date().toISOString()
-        };
-        saveVouches(vouches);
 
         const embed = new EmbedBuilder()
             .setTitle(`New Vouch de ${interaction.user.username}`)
@@ -78,14 +59,12 @@ module.exports = {
             )
             .setFooter({ text: 'Service proposé par Lightvault by 3keh' });
 
-        const channel = interaction.guild.channels.cache.get('1417943146653810859');
+        const channel = interaction.guild.channels.cache.get(process.env.VOUCH_CHANNEL_ID);
         if (!channel) return interaction.reply({ content: "Channel introuvable.", ephemeral: true });
 
         await channel.send({ embeds: [embed] });
 
         vouchCount++;
-
-        await updateLeaderboard(client, vouches);
 
         await interaction.reply({ content: "Ton vouch a été envoyé ! ✅", ephemeral: true });
     }
