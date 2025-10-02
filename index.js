@@ -1,9 +1,8 @@
-require('dotenv').config();
+require("dotenv").config();
 const fs = require("fs");
 const path = require("path");
 const express = require("express");
 const { Client, Collection, GatewayIntentBits, Events } = require("discord.js");
-const { updateLeaderboard } = require("./utils/leaderboard");
 
 const app = express();
 const PORT = process.env.PORT || 10000;
@@ -21,35 +20,23 @@ for (const file of commandFiles) {
     client.commands.set(command.data.name, command);
 }
 
-// ----- Leaderboard data -----
-const LEADERBOARD_FILE = path.join(__dirname, "leaderboard.json");
-let leaderboard = {};
-if (fs.existsSync(LEADERBOARD_FILE)) {
-    leaderboard = JSON.parse(fs.readFileSync(LEADERBOARD_FILE));
-}
-function saveLeaderboard() {
-    fs.writeFileSync(LEADERBOARD_FILE, JSON.stringify(leaderboard, null, 4));
-}
-
 // ----- Ready event -----
 client.once(Events.ClientReady, async () => {
     console.log(`💙 ${client.user.tag} ready!`);
 
-<<<<<<< HEAD
-    // Mettre à jour le leaderboard au démarrage si des vouches existent
-=======
-    // Mettre à jour le leaderboard au démarrage
->>>>>>> 0e7b8bf0a9d29c6c173e4331e96eee99f7939988
-    if (Object.keys(leaderboard).length > 0) {
-        try {
-            await updateLeaderboard(client, leaderboard);
-        } catch (err) {
-            console.error("❌ Erreur lors de la mise à jour du leaderboard :", err);
+    // Synchronisation des commandes sur le serveur (guild)
+    const guildId = process.env.GUILD_ID;
+    if (guildId) {
+        const guild = await client.guilds.fetch(guildId);
+        if (guild) {
+            await guild.commands.set(client.commands.map(cmd => cmd.data.toJSON()));
+            console.log("✅ Commandes synchronisées avec le serveur.");
         }
+    } else {
+        // Commandes globales
+        await client.application.commands.set(client.commands.map(cmd => cmd.data.toJSON()));
+        console.log("✅ Commandes globales synchronisées.");
     }
-
-    // Commandes guild synchronisées **manuellement via deploy-commands.js**
-    console.log("✅ Bot prêt, commandes slash à synchroniser via 'npm run deploy'");
 });
 
 // ----- Interaction event -----
@@ -60,28 +47,23 @@ client.on(Events.InteractionCreate, async interaction => {
     if (!command) return;
 
     try {
-        await command.execute(interaction, leaderboard, saveLeaderboard, client);
+        await command.execute(interaction);
     } catch (error) {
         console.error(error);
         if (!interaction.replied) {
-<<<<<<< HEAD
-            await interaction.reply({ content: "❌ Une erreur est survenue.", flags: 64 }); // ephemeral
-=======
-            await interaction.reply({ content: "❌ Une erreur est survenue.", flags: 64 });
->>>>>>> 0e7b8bf0a9d29c6c173e4331e96eee99f7939988
+            await interaction.reply({ content: "❌ Une erreur est survenue.", ephemeral: true });
         }
     }
 });
 
 // ----- Express Web Server -----
-app.get("/", (req, res) => res.send("Bot FastShop en ligne 🎉"));
-app.listen(PORT, () => console.log(`🌐 Web server running on port ${PORT}`));
+app.get("/", (req, res) => {
+    res.send("Bot FastShop en ligne 🎉");
+});
+
+app.listen(PORT, () => {
+    console.log(`🌐 Web server running on port ${PORT}`);
+});
 
 // ----- Login -----
-<<<<<<< HEAD
-client.login(process.env.BOT_TOKEN).catch(err => {
-    console.error("❌ Impossible de se connecter avec le BOT_TOKEN :", err);
-});
-=======
 client.login(process.env.BOT_TOKEN);
->>>>>>> 0e7b8bf0a9d29c6c173e4331e96eee99f7939988
