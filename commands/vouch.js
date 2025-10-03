@@ -25,12 +25,7 @@ module.exports = {
                 { name: "Ltc", value: "Litecoin" }
             ))
         .addIntegerOption(o => o.setName("note").setDescription("Note 1-5").setRequired(true))
-        .addStringOption(o => o.setName("anonyme").setDescription("Anonyme ?").setRequired(true)
-            .addChoices(
-                { name: "Oui", value: "oui" },
-                { name: "Non", value: "non" }
-            ))
-        .addStringOption(o => o.setName("commentaire").setDescription("Commentaire").setRequired(false)),
+        .addStringOption(o => o.setName("commentaire").setDescription("Commentaire").setRequired(true)), // ✅ Obligatoire
 
     async execute(interaction) {
         const vendeur = interaction.options.getUser("vendeur");
@@ -39,22 +34,21 @@ module.exports = {
         const prix = interaction.options.getString("prix");
         const moyen = interaction.options.getString("moyen_de_paiement");
         const note = interaction.options.getInteger("note");
-        const commentaire = interaction.options.getString("commentaire") || "Aucun commentaire.";
-        const anonyme = interaction.options.getString("anonyme") === "oui";
-        const userMention = anonyme ? "Anonyme" : `<@${interaction.user.id}>`;
+        const commentaire = interaction.options.getString("commentaire");
+        const client = interaction.user; // ✅ La personne qui fait le vouch
 
         const stars = "⭐".repeat(note) + "☆".repeat(5 - note);
 
         const embed = new EmbedBuilder()
-            .setTitle(`New Vouch de ${interaction.user.username}`)
+            .setTitle(`New Vouch de ${client.username}`)
             .setColor("#3366FF")
-            .setThumbnail(vendeur.displayAvatarURL({ size: 1024 }))
+            .setThumbnail(client.displayAvatarURL({ size: 1024 })) // ✅ Photo du client
             .addFields(
                 { name: "Note", value: stars, inline: false },
                 { name: "Vendeur", value: `<@${vendeur.id}>`, inline: false },
                 { name: "Item vendu", value: `${quantite}x ${item} (${prix} via ${moyen})`, inline: false },
                 { name: "Vouch N°", value: `${vouchCount}`, inline: false },
-                { name: "Vouch par", value: userMention, inline: false },
+                { name: "Vouch par", value: `<@${client.id}>`, inline: false }, // ✅ Mention directe du client
                 { name: "Date du vouch", value: new Date().toLocaleString("fr-FR"), inline: false },
                 { name: "Commentaire", value: commentaire, inline: false }
             )
@@ -65,8 +59,7 @@ module.exports = {
 
         await channel.send({ embeds: [embed] });
 
-        // Ajouter au JSON
-        addVouch(interaction.user.id, {
+        addVouch(client.id, {
             vendeur_id: vendeur.id,
             quantite,
             item,
