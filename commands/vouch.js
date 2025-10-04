@@ -26,50 +26,59 @@ module.exports = {
         .addStringOption(o => o.setName("commentaire").setDescription("Commentaire").setRequired(true)),
 
     async execute(interaction) {
-        const vendeur = interaction.options.getUser("vendeur");
-        const quantite = interaction.options.getInteger("quantite");
-        const item = interaction.options.getString("item");
-        const prix = interaction.options.getString("prix");
-        const moyen = interaction.options.getString("moyen_de_paiement");
-        const note = interaction.options.getInteger("note");
-        const commentaire = interaction.options.getString("commentaire");
+        await interaction.deferReply({ ephemeral: true });
 
-        const stars = "⭐".repeat(note) + "☆".repeat(5 - note);
+        try {
+            const vendeur = interaction.options.getUser("vendeur");
+            const quantite = interaction.options.getInteger("quantite");
+            const item = interaction.options.getString("item");
+            const prix = interaction.options.getString("prix");
+            const moyen = interaction.options.getString("moyen_de_paiement");
+            const note = interaction.options.getInteger("note");
+            const commentaire = interaction.options.getString("commentaire");
 
-        const vouchNumber = getVouchCount() + 1;
+            const stars = "⭐".repeat(note) + "☆".repeat(5 - note);
+            const vouchNumber = getVouchCount() + 1;
 
-        const embed = new EmbedBuilder()
-            .setTitle(`📩 Nouveau Vouch`)
-            .setColor("#3366FF")
-            .setThumbnail(interaction.user.displayAvatarURL({ size: 1024 }))
-            .addFields(
-                { name: "👤 Vendeur", value: `<@${vendeur.id}>`, inline: false },
-                { name: "🛒 Item vendu", value: `${quantite}x ${item} (${prix} via ${moyen})`, inline: false },
-                { name: "⭐ Note", value: stars, inline: false },
-                { name: "📌 Vouch N°", value: `${vouchNumber}`, inline: false },
-                { name: "✍️ Vouch par", value: `<@${interaction.user.id}>`, inline: false },
-                { name: "🕒 Date du vouch", value: new Date().toLocaleString("fr-FR"), inline: false },
-                { name: "💬 Commentaire", value: commentaire, inline: false }
-            )
-            .setFooter({ text: "Service proposé par Lightvault by 3keh" });
+            const embed = new EmbedBuilder()
+                .setTitle(`📩 Nouveau Vouch`)
+                .setColor("#3366FF")
+                .setThumbnail(interaction.user.displayAvatarURL({ size: 1024 }))
+                .addFields(
+                    { name: "👤 Vendeur", value: `<@${vendeur.id}>`, inline: false },
+                    { name: "🛒 Item vendu", value: `${quantite}x ${item} (${prix} via ${moyen})`, inline: false },
+                    { name: "⭐ Note", value: stars, inline: false },
+                    { name: "📌 Vouch N°", value: `${vouchNumber}`, inline: false },
+                    { name: "✍️ Vouch par", value: `<@${interaction.user.id}>`, inline: false },
+                    { name: "🕒 Date du vouch", value: new Date().toLocaleString("fr-FR"), inline: false },
+                    { name: "💬 Commentaire", value: commentaire, inline: false }
+                )
+                .setFooter({ text: "Service proposé par Lightvault by 3keh" });
 
-        const channel = interaction.guild.channels.cache.get("1417943146653810859");
-        if (!channel) return interaction.reply({ content: "❌ Channel introuvable.", ephemeral: true });
+            const channel = interaction.guild.channels.cache.get("1417943146653810859");
+            
+            if (!channel) {
+                return await interaction.editReply("❌ Le salon de vouch est introuvable.");
+            }
 
-        const msg = await channel.send({ embeds: [embed] });
+            const msg = await channel.send({ embeds: [embed] });
 
-        addVouch(interaction.user.id, {
-            vendeur_id: vendeur.id,
-            quantite,
-            item,
-            prix,
-            moyen,
-            note,
-            commentaire,
-            date: new Date().toISOString(),
-            messageId: msg.id
-        });
+            addVouch(interaction.user.id, {
+                vendeur_id: vendeur.id,
+                quantite,
+                item,
+                prix,
+                moyen,
+                note,
+                commentaire,
+                date: new Date().toISOString(),
+                messageId: msg.id
+            });
 
-        await interaction.reply({ content: "✅ Ton vouch a été envoyé !", flags: 64 });
+            await interaction.editReply("✅ Ton vouch a été envoyé !");
+        } catch (err) {
+            console.error(err);
+            await interaction.editReply("❌ Une erreur est survenue lors de l'envoi du vouch.");
+        }
     }
 };
