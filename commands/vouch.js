@@ -36,7 +36,7 @@ module.exports = {
                 { name: "Date du vouch", value: new Date().toLocaleString("fr-FR"), inline: false },
                 { name: "Commentaire", value: commentaire, inline: false }
             )
-            .setFooter({ text: "Service proposé par Lightvault by 3keh" });
+            .setFooter({ text: "Service proposé par Fast Shop by Ziko" });
 
         const channel = interaction.guild.channels.cache.get("1417943146653810859");
         if (!channel) return interaction.reply({ content: "Channel introuvable.", ephemeral: true });
