@@ -1,61 +1,59 @@
 const fs = require("fs");
 const path = require("path");
 
-const VOUCH_FILE = path.join(__dirname, "../vouch.json");
+const vouchesPath = path.join(__dirname, "../vouch.json");
 
-// Charge les vouches depuis le JSON
+// Charger les vouches existants
 function loadVouches() {
-    if (!fs.existsSync(VOUCH_FILE)) return {};
-    return JSON.parse(fs.readFileSync(VOUCH_FILE));
+    if (!fs.existsSync(vouchesPath)) {
+        fs.writeFileSync(vouchesPath, JSON.stringify({}, null, 2));
+        return {};
+    }
+    return JSON.parse(fs.readFileSync(vouchesPath, "utf8"));
 }
 
-// Sauvegarde les vouches dans le JSON
+// Enregistrer les vouches
 function saveVouches(data) {
-    fs.writeFileSync(VOUCH_FILE, JSON.stringify(data, null, 4));
+    fs.writeFileSync(vouchesPath, JSON.stringify(data, null, 2));
 }
 
-// Ajoute un vouch
-function addVouch(userId, vendeurId, note, quantite, item, prix, moyen, commentaire) {
-    const data = loadVouches();
-    if (!data[userId]) data[userId] = [];
-    const vouchNum = Object.values(data).flat().length + 1;
-    data[userId].push({
-        vouchNum,
-        vendeurId,
-        note,
-        quantite,
-        item,
-        prix,
-        moyen,
-        commentaire,
-        date: new Date().toISOString(),
-    });
-    saveVouches(data);
-    return vouchNum;
+// Ajouter un vouch
+function addVouch(userId, vouchData) {
+    const vouches = loadVouches();
+    if (!vouches[userId]) vouches[userId] = [];
+    vouches[userId].push(vouchData);
+    saveVouches(vouches);
 }
 
-// Supprime le dernier vouch d’un utilisateur
+// Obtenir le nombre total de vouches (tous utilisateurs confondus)
+function getVouchCount() {
+    const vouches = loadVouches();
+    return Object.values(vouches).reduce((acc, arr) => acc + arr.length, 0);
+}
+
+// Supprimer le dernier vouch d'un utilisateur
 function deleteLastVouch(userId) {
-    const data = loadVouches();
-    if (!data[userId] || data[userId].length === 0) return null;
-    const removed = data[userId].pop();
-    saveVouches(data);
-    return removed;
+    const vouches = loadVouches();
+    if (!vouches[userId] || vouches[userId].length === 0) {
+        return { success: false };
+    }
+
+    const lastVouch = vouches[userId].pop();
+    saveVouches(vouches);
+
+    return { success: true, messageId: lastVouch.messageId };
 }
 
-// Récupère les vouches d’un vendeur
-function getVouchesOfSeller(vendeurId) {
-    const data = loadVouches();
-    const allVouches = Object.values(data).flat();
-    const sellerVouches = allVouches.filter(v => v.vendeurId === vendeurId);
-    const moyenne = sellerVouches.length === 0 ? 0 : (sellerVouches.reduce((a,b)=>a+b.note,0)/sellerVouches.length).toFixed(2);
-    return { sellerVouches, moyenne };
+// Récupérer tous les vouches pour un vendeur spécifique
+function getVouchesForVendeur(vendeurId) {
+    const vouches = loadVouches();
+    const allUserVouches = Object.values(vouches).flat();
+    return allUserVouches.filter(v => v.vendeur_id === vendeurId);
 }
 
 module.exports = {
-    loadVouches,
-    saveVouches,
     addVouch,
+    getVouchCount,
     deleteLastVouch,
-    getVouchesOfSeller
+    getVouchesForVendeur
 };
