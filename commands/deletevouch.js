@@ -1,5 +1,8 @@
 const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
-const { deleteLastVouch } = require("../utils/vouchUtils");
+const fs = require("fs");
+const path = require("path");
+
+const vouchFile = path.join(__dirname, "../vouch.json");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -7,27 +10,24 @@ module.exports = {
         .setDescription("Supprime ton dernier vouch"),
 
     async execute(interaction) {
-        const removed = deleteLastVouch(interaction.user.id);
-        if (!removed) {
+        const user = interaction.user;
+
+        if (!fs.existsSync(vouchFile)) return interaction.reply({ content: "Aucun vouch trouvé.", ephemeral: true });
+
+        const vouches = JSON.parse(fs.readFileSync(vouchFile));
+        if (!vouches[user.id] || vouches[user.id].length === 0) {
             return interaction.reply({ content: "Tu n'as aucun vouch à supprimer.", ephemeral: true });
         }
 
+        // Supprimer le dernier vouch
+        const removed = vouches[user.id].pop();
+        fs.writeFileSync(vouchFile, JSON.stringify(vouches, null, 4));
+
         const embed = new EmbedBuilder()
-            .setTitle("Dernier Vouch Supprimé")
-            .setColor("#FF0000")
-            .setDescription(`<@${interaction.user.id}> a supprimé son dernier vouch !`)
-            .addFields(
-                { name: "Vendeur", value: `<@${removed.vendeurId}>`, inline: false },
-                { name: "Item vendu", value: `${removed.quantite}x ${removed.item} (${removed.prix} via ${removed.moyen})`, inline: false },
-                { name: "Note", value: "⭐".repeat(removed.note) + "☆".repeat(5 - removed.note), inline: false },
-                { name: "Commentaire", value: removed.commentaire, inline: false },
-                { name: "Date", value: new Date(removed.date).toLocaleString("fr-FR"), inline: false }
-            );
+            .setTitle("Vouch supprimé")
+            .setColor("Red")
+            .setDescription(`<@${user.id}> a supprimé son dernier vouch.`);
 
-        const channel = interaction.guild.channels.cache.get("1417943146653810859");
-        if (!channel) return interaction.reply({ content: "Channel introuvable.", ephemeral: true });
-
-        await channel.send({ embeds: [embed] });
-        await interaction.reply({ content: "✅ Ton dernier vouch a été supprimé.", ephemeral: true });
+        await interaction.reply({ embeds: [embed] });
     }
 };
