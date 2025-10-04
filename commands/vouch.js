@@ -26,6 +26,7 @@ module.exports = {
         .addStringOption(o => o.setName("commentaire").setDescription("Commentaire").setRequired(true)),
 
     async execute(interaction) {
+        // ✅ Toujours différer la réponse pour éviter "already acknowledged"
         await interaction.deferReply({ ephemeral: true });
 
         try {
@@ -56,13 +57,12 @@ module.exports = {
                 .setFooter({ text: "Service proposé par Lightvault by 3keh" });
 
             const channel = interaction.guild.channels.cache.get("1417943146653810859");
-            
-            if (!channel) {
-                return await interaction.editReply("❌ Le salon de vouch est introuvable.");
-            }
+            if (!channel) return await interaction.editReply("❌ Le salon de vouch est introuvable.");
 
+            // Envoyer le vouch dans le channel
             const msg = await channel.send({ embeds: [embed] });
 
+            // Sauvegarder dans le JSON
             addVouch(interaction.user.id, {
                 vendeur_id: vendeur.id,
                 quantite,
@@ -75,10 +75,16 @@ module.exports = {
                 messageId: msg.id
             });
 
+            // Réponse finale
             await interaction.editReply("✅ Ton vouch a été envoyé !");
         } catch (err) {
             console.error(err);
-            await interaction.editReply("❌ Une erreur est survenue lors de l'envoi du vouch.");
+            // ⚠️ Utiliser editReply ici, pas reply
+            if (interaction.deferred || interaction.replied) {
+                await interaction.editReply("❌ Une erreur est survenue lors de l'envoi du vouch.");
+            } else {
+                await interaction.reply({ content: "❌ Une erreur est survenue.", ephemeral: true });
+            }
         }
     }
 };
