@@ -1,8 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
-const fs = require("fs");
-const path = require("path");
-
-const vouchFile = path.join(__dirname, "../vouch.json");
+const { deleteLastVouch } = require("../utils/vouches");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -10,23 +7,25 @@ module.exports = {
         .setDescription("Supprime ton dernier vouch"),
 
     async execute(interaction) {
-        const user = interaction.user;
+        const { success, messageId } = deleteLastVouch(interaction.user.id);
 
-        if (!fs.existsSync(vouchFile)) return interaction.reply({ content: "Aucun vouch trouvé.", ephemeral: true });
-
-        const vouches = JSON.parse(fs.readFileSync(vouchFile));
-        if (!vouches[user.id] || vouches[user.id].length === 0) {
-            return interaction.reply({ content: "Tu n'as aucun vouch à supprimer.", ephemeral: true });
+        if (!success) {
+            return interaction.reply({ content: "❌ Tu n'as aucun vouch à supprimer.", flags: 64 });
         }
 
-        // Supprimer le dernier vouch
-        const removed = vouches[user.id].pop();
-        fs.writeFileSync(vouchFile, JSON.stringify(vouches, null, 4));
+        try {
+            const channel = interaction.guild.channels.cache.get("1417943146653810859");
+            if (channel) {
+                const msg = await channel.messages.fetch(messageId);
+                if (msg) await msg.delete();
+            }
+        } catch (err) {
+            console.error("Erreur suppression message :", err);
+        }
 
         const embed = new EmbedBuilder()
-            .setTitle("Vouch supprimé")
             .setColor("Red")
-            .setDescription(`<@${user.id}> a supprimé son dernier vouch.`);
+            .setDescription(`❌ <@${interaction.user.id}> a supprimé son dernier vouch.`);
 
         await interaction.reply({ embeds: [embed] });
     }
