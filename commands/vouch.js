@@ -1,20 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
-const fs = require("fs");
-const path = require("path");
-
-const vouchFile = path.join(__dirname, "../vouch.json");
-let vouches = {};
-let vouchCount = 1;
-
-// Charger le JSON au démarrage
-if (fs.existsSync(vouchFile)) {
-    vouches = JSON.parse(fs.readFileSync(vouchFile));
-    // Définir le compteur sur la dernière vouch existante
-    const allVouches = Object.values(vouches).flat();
-    if (allVouches.length > 0) {
-        vouchCount = allVouches.length + 1;
-    }
-}
+const { addVouch, getVouchCount } = require("../utils/vouches");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -35,10 +20,10 @@ module.exports = {
         .addStringOption(o => o.setName("moyen_de_paiement").setDescription("Moyen de paiement").setRequired(true)
             .addChoices(
                 { name: "Paypal", value: "Paypal" },
-                { name: "Ltc", value: "Litecoin" }
+                { name: "Litecoin", value: "Litecoin" }
             ))
         .addIntegerOption(o => o.setName("note").setDescription("Note 1-5").setRequired(true))
-        .addStringOption(o => o.setName("commentaire").setDescription("Commentaire obligatoire").setRequired(true)),
+        .addStringOption(o => o.setName("commentaire").setDescription("Commentaire").setRequired(true)),
 
     async execute(interaction) {
         const vendeur = interaction.options.getUser("vendeur");
@@ -48,33 +33,32 @@ module.exports = {
         const moyen = interaction.options.getString("moyen_de_paiement");
         const note = interaction.options.getInteger("note");
         const commentaire = interaction.options.getString("commentaire");
-        const user = interaction.user;
 
         const stars = "⭐".repeat(note) + "☆".repeat(5 - note);
 
+        const vouchNumber = getVouchCount() + 1;
+
         const embed = new EmbedBuilder()
-            .setTitle(`New Vouch de ${user.username}`)
+            .setTitle(`📩 Nouveau Vouch`)
             .setColor("#3366FF")
-            .setThumbnail(user.displayAvatarURL({ size: 1024 }))
+            .setThumbnail(interaction.user.displayAvatarURL({ size: 1024 }))
             .addFields(
-                { name: "Note", value: stars, inline: false },
-                { name: "Vendeur", value: `<@${vendeur.id}>`, inline: false },
-                { name: "Item vendu", value: `${quantite}x ${item} (${prix} via ${moyen})`, inline: false },
-                { name: "Vouch N°", value: `${vouchCount}`, inline: false },
-                { name: "Vouch par", value: `<@${user.id}>`, inline: false },
-                { name: "Date du vouch", value: new Date().toLocaleString("fr-FR"), inline: false },
-                { name: "Commentaire", value: commentaire, inline: false }
+                { name: "👤 Vendeur", value: `<@${vendeur.id}>`, inline: false },
+                { name: "🛒 Item vendu", value: `${quantite}x ${item} (${prix} via ${moyen})`, inline: false },
+                { name: "⭐ Note", value: stars, inline: false },
+                { name: "📌 Vouch N°", value: `${vouchNumber}`, inline: false },
+                { name: "✍️ Vouch par", value: `<@${interaction.user.id}>`, inline: false },
+                { name: "🕒 Date du vouch", value: new Date().toLocaleString("fr-FR"), inline: false },
+                { name: "💬 Commentaire", value: commentaire, inline: false }
             )
             .setFooter({ text: "Service proposé par Lightvault by 3keh" });
 
         const channel = interaction.guild.channels.cache.get("1417943146653810859");
-        if (!channel) return interaction.reply({ content: "Channel introuvable.", ephemeral: true });
+        if (!channel) return interaction.reply({ content: "❌ Channel introuvable.", ephemeral: true });
 
-        await channel.send({ embeds: [embed] });
+        const msg = await channel.send({ embeds: [embed] });
 
-        // Ajouter au JSON
-        if (!vouches[user.id]) vouches[user.id] = [];
-        vouches[user.id].push({
+        addVouch(interaction.user.id, {
             vendeur_id: vendeur.id,
             quantite,
             item,
@@ -83,12 +67,9 @@ module.exports = {
             note,
             commentaire,
             date: new Date().toISOString(),
-            vouchNumber: vouchCount
+            messageId: msg.id
         });
 
-        fs.writeFileSync(vouchFile, JSON.stringify(vouches, null, 4));
-        vouchCount++;
-
-        await interaction.reply({ content: "Ton vouch a été envoyé ! ✅", ephemeral: true });
+        await interaction.reply({ content: "✅ Ton vouch a été envoyé !", flags: 64 });
     }
 };
