@@ -1,20 +1,19 @@
-// commands/vouch.js
 const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
 const fs = require("fs");
 const path = require("path");
 
-// Fichier JSON pour stocker les vouches
-const VOUCH_FILE = path.join(__dirname, "../vouch.json");
+const vouchFile = path.join(__dirname, "../vouch.json");
+let vouches = {};
+let vouchCount = 1;
 
-// Charger ou initialiser le JSON
-let vouches = { count: 0, data: [] };
-if (fs.existsSync(VOUCH_FILE)) {
-    vouches = JSON.parse(fs.readFileSync(VOUCH_FILE));
-}
-
-// Fonction pour sauvegarder le JSON
-function saveVouches() {
-    fs.writeFileSync(VOUCH_FILE, JSON.stringify(vouches, null, 4));
+// Charger le JSON au démarrage
+if (fs.existsSync(vouchFile)) {
+    vouches = JSON.parse(fs.readFileSync(vouchFile));
+    // Définir le compteur sur la dernière vouch existante
+    const allVouches = Object.values(vouches).flat();
+    if (allVouches.length > 0) {
+        vouchCount = allVouches.length + 1;
+    }
 }
 
 module.exports = {
@@ -36,10 +35,10 @@ module.exports = {
         .addStringOption(o => o.setName("moyen_de_paiement").setDescription("Moyen de paiement").setRequired(true)
             .addChoices(
                 { name: "Paypal", value: "Paypal" },
-                { name: "LTC", value: "Litecoin" }
+                { name: "Ltc", value: "Litecoin" }
             ))
         .addIntegerOption(o => o.setName("note").setDescription("Note 1-5").setRequired(true))
-        .addStringOption(o => o.setName("commentaire").setDescription("Commentaire").setRequired(true)),
+        .addStringOption(o => o.setName("commentaire").setDescription("Commentaire obligatoire").setRequired(true)),
 
     async execute(interaction) {
         const vendeur = interaction.options.getUser("vendeur");
@@ -49,69 +48,47 @@ module.exports = {
         const moyen = interaction.options.getString("moyen_de_paiement");
         const note = interaction.options.getInteger("note");
         const commentaire = interaction.options.getString("commentaire");
-        const client = interaction.user;
+        const user = interaction.user;
 
-        // Générer les étoiles
         const stars = "⭐".repeat(note) + "☆".repeat(5 - note);
 
-        // Incrémenter le compteur de vouch
-        vouches.count++;
-        const vouchNumber = vouches.count;
-
-        // Créer l'embed du vouch
         const embed = new EmbedBuilder()
-            .setTitle(`New Vouch de ${client.username}`)
+            .setTitle(`New Vouch de ${user.username}`)
             .setColor("#3366FF")
-            .setThumbnail(client.displayAvatarURL({ size: 1024 })) // photo du client
+            .setThumbnail(user.displayAvatarURL({ size: 1024 }))
             .addFields(
                 { name: "Note", value: stars, inline: false },
                 { name: "Vendeur", value: `<@${vendeur.id}>`, inline: false },
                 { name: "Item vendu", value: `${quantite}x ${item} (${prix} via ${moyen})`, inline: false },
-                { name: "Vouch N°", value: `${vouchNumber}`, inline: false },
-                { name: "Vouch par", value: `<@${client.id}>`, inline: false },
+                { name: "Vouch N°", value: `${vouchCount}`, inline: false },
+                { name: "Vouch par", value: `<@${user.id}>`, inline: false },
                 { name: "Date du vouch", value: new Date().toLocaleString("fr-FR"), inline: false },
                 { name: "Commentaire", value: commentaire, inline: false }
             )
-            .setFooter({ text: "Service proposé par Fast Shop by Ziko" });
+            .setFooter({ text: "Service proposé par Lightvault by 3keh" });
 
-        // Envoi dans le salon vouches
         const channel = interaction.guild.channels.cache.get("1417943146653810859");
-        if (!channel) {
-            if (!interaction.replied) {
-                await interaction.reply({ content: "Channel introuvable.", ephemeral: true });
-            }
-            return;
-        }
+        if (!channel) return interaction.reply({ content: "Channel introuvable.", ephemeral: true });
 
-        try {
-            await channel.send({ embeds: [embed] });
+        await channel.send({ embeds: [embed] });
 
-            // Ajouter au JSON
-            vouches.data.push({
-                vouchNumber,
-                client_id: client.id,
-                vendeur_id: vendeur.id,
-                quantite,
-                item,
-                prix,
-                moyen,
-                note,
-                commentaire,
-                date: new Date().toISOString()
-            });
-            saveVouches();
+        // Ajouter au JSON
+        if (!vouches[user.id]) vouches[user.id] = [];
+        vouches[user.id].push({
+            vendeur_id: vendeur.id,
+            quantite,
+            item,
+            prix,
+            moyen,
+            note,
+            commentaire,
+            date: new Date().toISOString(),
+            vouchNumber: vouchCount
+        });
 
-            // Répondre au client
-            if (!interaction.replied) {
-                await interaction.reply({ content: "Ton vouch a été envoyé ! ✅", ephemeral: true });
-            }
-        } catch (err) {
-            console.error(err);
-            if (!interaction.replied) {
-                await interaction.reply({ content: "❌ Une erreur est survenue.", ephemeral: true });
-            } else {
-                await interaction.followUp({ content: "❌ Une erreur est survenue.", ephemeral: true });
-            }
-        }
+        fs.writeFileSync(vouchFile, JSON.stringify(vouches, null, 4));
+        vouchCount++;
+
+        await interaction.reply({ content: "Ton vouch a été envoyé ! ✅", ephemeral: true });
     }
 };
